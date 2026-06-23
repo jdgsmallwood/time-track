@@ -157,9 +157,9 @@
             <th class="pb-2 font-medium">Week</th>
             <th class="pb-2 font-medium">Status</th>
             <th class="pb-2 font-medium text-right">Hours</th>
-            <th class="pb-2 font-medium text-right">Km planned</th>
-            <th class="pb-2 font-medium text-right">Km actual</th>
-            <th class="pb-2 font-medium text-right">Practice</th>
+            <th class="pb-2 font-medium text-right hidden sm:table-cell">Km planned</th>
+            <th class="pb-2 font-medium text-right hidden sm:table-cell">Km actual</th>
+            <th class="pb-2 font-medium text-right hidden sm:table-cell">Practice</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -179,13 +179,13 @@
               </span>
             </td>
             <td class="py-2 pr-4 text-right text-gray-600">{{ row.total_hours|floatformat:1 }}h</td>
-            <td class="py-2 pr-4 text-right text-gray-600">
+            <td class="py-2 pr-4 text-right text-gray-600 hidden sm:table-cell">
               {% if row.km_planned %}{{ row.km_planned|floatformat:1 }}{% else %}—{% endif %}
             </td>
-            <td class="py-2 pr-4 text-right text-gray-600">
+            <td class="py-2 pr-4 text-right text-gray-600 hidden sm:table-cell">
               {% if row.km_actual %}{{ row.km_actual|floatformat:1 }}{% else %}—{% endif %}
             </td>
-            <td class="py-2 text-right text-gray-600">
+            <td class="py-2 text-right text-gray-600 hidden sm:table-cell">
               {% if row.practice_mins %}{{ row.practice_mins }}min{% else %}—{% endif %}
             </td>
           </tr>

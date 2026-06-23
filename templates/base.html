@@ -13,7 +13,7 @@
 <body class="h-full" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
 <div class="min-h-full flex flex-col">
-  <nav class="bg-indigo-700 text-white shadow-lg">
+  <nav class="bg-indigo-700 text-white shadow-lg" x-data="{ open: false }">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         <div class="flex items-center gap-8">
@@ -24,7 +24,7 @@
             <a href="/schedule/weeks/" class="hover:text-indigo-200 transition-colors">All Weeks</a>
           </div>
         </div>
-        <div class="flex items-center gap-4 text-sm">
+        <div class="hidden md:flex items-center gap-4 text-sm">
           <a href="/schedule/history/" class="hover:text-indigo-200 transition-colors">History</a>
           <a href="/schedule/weekly-tasks/" class="hover:text-indigo-200 transition-colors">Tasks</a>
           <a href="/running/training-plans/" class="hover:text-indigo-200 transition-colors">Training</a>
@@ -36,6 +36,32 @@
             <button type="submit" class="hover:text-indigo-200 transition-colors">Logout</button>
           </form>
         </div>
+        <button @click="open = !open"
+                class="md:hidden p-2 rounded-lg text-2xl leading-none"
+                aria-label="Toggle menu">
+          <span x-show="!open">☰</span>
+          <span x-show="open" x-cloak>×</span>
+        </button>
+      </div>
+    </div>
+    <div x-show="open" x-cloak
+         class="md:hidden border-t border-white/40 bg-indigo-600">
+      <div class="px-2 py-2 space-y-0.5 text-sm font-medium">
+        <a href="/schedule/templates/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">Templates</a>
+        <a href="/schedule/weeks/current/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">This Week</a>
+        <a href="/schedule/weeks/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">All Weeks</a>
+        <div class="mt-1 mb-1 border-t border-white/40"></div>
+        <a href="/schedule/history/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">History</a>
+        <a href="/schedule/weekly-tasks/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">Tasks</a>
+        <a href="/running/training-plans/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">Training</a>
+        <a href="/settings/categories/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">Categories</a>
+        <a href="/gcal/settings/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">Google Cal</a>
+        <a href="/strava/settings/" class="block px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">Strava</a>
+        <div class="mt-1 mb-1 border-t border-white/40"></div>
+        <form method="post" action="/accounts/logout/">
+          {% csrf_token %}
+          <button type="submit" class="w-full text-left px-3 py-3 rounded-lg hover:bg-indigo-700 transition-colors">Logout</button>
+        </form>
       </div>
     </div>
   </nav>

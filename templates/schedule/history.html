@@ -16,9 +16,9 @@
           <th class="px-4 py-3 font-medium">Week</th>
           <th class="px-4 py-3 font-medium">Status</th>
           <th class="px-4 py-3 font-medium">Hours</th>
-          <th class="px-4 py-3 font-medium">Top categories</th>
-          <th class="px-4 py-3 font-medium">Running</th>
-          <th class="px-4 py-3 font-medium">Practice</th>
+          <th class="px-4 py-3 font-medium hidden md:table-cell">Top categories</th>
+          <th class="px-4 py-3 font-medium hidden sm:table-cell">Running</th>
+          <th class="px-4 py-3 font-medium hidden sm:table-cell">Practice</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-100">
@@ -38,12 +38,12 @@
             </span>
           </td>
           <td class="px-4 py-3 text-gray-700">{{ row.stats.total_hours|floatformat:1 }}h</td>
-          <td class="px-4 py-3 text-gray-600 text-xs">
+          <td class="px-4 py-3 text-gray-600 text-xs hidden md:table-cell">
             {% for cat, hrs in row.stats.hours_by_cat.items %}{% if forloop.counter <= 3 %}
             <span class="mr-2">{{ cat }} {{ hrs|floatformat:1 }}h</span>
             {% endif %}{% endfor %}
           </td>
-          <td class="px-4 py-3">
+          <td class="px-4 py-3 hidden sm:table-cell">
             {% if row.stats.run.session_count %}
             <div class="flex items-center gap-2">
               <div class="text-gray-700 text-xs whitespace-nowrap">
@@ -58,7 +58,7 @@
             <span class="text-gray-300">—</span>
             {% endif %}
           </td>
-          <td class="px-4 py-3 text-xs text-gray-600">
+          <td class="px-4 py-3 text-xs text-gray-600 hidden sm:table-cell">
             {% for instrument, mins in row.stats.practice.items %}
             <div>{{ instrument }}: {{ mins.planned }}min</div>
             {% empty %}
