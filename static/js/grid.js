@@ -270,7 +270,15 @@ const GRID = (() => {
   }
 
   function showCreatePopover(dayIdx, startMins, endMins, clickClientX, clickClientY) {
-    if (!BLOCK_CREATE_URL) return;
+    if (!BLOCK_CREATE_URL) {
+      // No plan week exists for this week yet
+      const tip = document.createElement('div');
+      tip.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:8px 16px;border-radius:8px;font-size:13px;z-index:9999;pointer-events:none;';
+      tip.textContent = 'Create a plan week first to add blocks here.';
+      document.body.appendChild(tip);
+      setTimeout(() => tip.remove(), 3000);
+      return;
+    }
     removeCreatePopover();
 
     // Tell the document handler to ignore this bubbling click
