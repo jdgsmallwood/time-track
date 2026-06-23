@@ -14,7 +14,7 @@
   {# ── Header ── #}
   <div class="flex items-start justify-between mb-3 px-2 flex-wrap gap-2">
     <div class="flex items-center gap-2 min-w-0">
-      <a href="/schedule/weeks/{{ prev_monday }}/"
+      <a href="/schedule/weeks/{{ prev_monday|date:'Y-m-d' }}/"
          class="text-gray-400 hover:text-indigo-600 transition-colors text-xl px-1">←</a>
       <div class="min-w-0">
         <div class="flex items-center gap-2 flex-wrap">
@@ -31,7 +31,7 @@
         </div>
         <p class="text-xs text-gray-400 mt-0.5">{{ time_zone }}</p>
       </div>
-      <a href="/schedule/weeks/{{ next_monday }}/"
+      <a href="/schedule/weeks/{{ next_monday|date:'Y-m-d' }}/"
          class="text-gray-400 hover:text-indigo-600 transition-colors text-xl px-1">→</a>
     </div>
 
@@ -163,7 +163,7 @@
   <div x-show="showCloneForm" x-cloak x-transition
        class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-3 mx-2">
     <h3 class="font-medium text-indigo-900 mb-3 text-sm">Clone from Template</h3>
-    <form method="post" action="/schedule/weeks/{{ start_date }}/" class="flex gap-3 items-end flex-wrap">
+    <form method="post" action="/schedule/weeks/{{ start_date|date:'Y-m-d' }}/" class="flex gap-3 items-end flex-wrap">
       {% csrf_token %}
       <div>
         <label class="text-xs text-indigo-700 font-medium">Template</label>

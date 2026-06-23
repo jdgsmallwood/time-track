@@ -381,7 +381,9 @@ const GRID = (() => {
     // ── Drag-to-create ───────────────────────────────────────────────────────
 
     gridEl.addEventListener('mousedown', e => {
-      if (e.button !== 0 || isDragging || e.target !== gridEl) return;
+      if (e.button !== 0 || isDragging) return;
+      // Ignore clicks that land on an existing block chip
+      if (e.target.closest && e.target.closest('[id^="block-"]')) return;
 
       const dayIdx = colAtClientX(e.clientX);
       if (dayIdx === -1) return;

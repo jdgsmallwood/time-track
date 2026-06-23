@@ -12,7 +12,7 @@
 
   <div class="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100">
     {% for w in weeks %}
-    <a href="/schedule/weeks/{{ w.start_date }}/"
+    <a href="/schedule/weeks/{{ w.start_date|date:'Y-m-d' }}/"
        class="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
       <div class="flex-1">
         <div class="font-semibold text-gray-900 group-hover:text-indigo-700 text-sm">
