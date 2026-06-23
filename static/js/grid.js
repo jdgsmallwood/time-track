@@ -355,35 +355,49 @@ const GRID = (() => {
       if (e.key === 'Enter') { e.preventDefault(); doSave(); }
       if (e.key === 'Escape') removeCreatePopover();
     });
-    // Stop clicks inside the popover from reaching the grid handler
+    // Stop pointer events inside the popover from reaching the grid handler
+    pop.addEventListener('pointerdown', e => e.stopPropagation());
     pop.addEventListener('click', e => e.stopPropagation());
   }
 
   let dragCreate = null; // { dayIdx, startMins, endMins, moved }
 
   function colAtClientX(clientX) {
+    // Primary: check actual column BoundingClientRects
     for (let i = 0; i < dayColumns.length; i++) {
       const cr = dayColumns[i].getBoundingClientRect();
-      if (clientX >= cr.left && clientX < cr.right) return i;
+      if (cr.width > 0 && clientX >= cr.left && clientX < cr.right) return i;
     }
-    return -1;
+    // Fallback: compute mathematically from the grid rect (handles Firefox
+    // returning stale zero-width rects for abs-positioned children of scroll containers)
+    const gridRect = gridEl.getBoundingClientRect();
+    const TIME_LABEL_PX = 56;
+    const usable = gridRect.width - TIME_LABEL_PX;
+    if (usable <= 0) return -1;
+    const x = clientX - gridRect.left - TIME_LABEL_PX;
+    if (x < 0) return -1;
+    const idx = Math.floor(x / (usable / 7));
+    return idx >= 0 && idx < 7 ? idx : -1;
   }
 
   function addGridClickHandler() {
     // Persistent outside-click handler — closes popover when clicking elsewhere.
-    // suppressNextOutsideClose skips the click that bubbles up from the same mouseup.
+    // suppressNextOutsideClose skips the click that bubbles from the same pointerup.
     document.addEventListener('click', e => {
       if (suppressNextOutsideClose) { suppressNextOutsideClose = false; return; }
       const pop = document.getElementById('create-popover');
       if (pop && !pop.contains(e.target)) removeCreatePopover();
     });
 
-    // ── Drag-to-create ───────────────────────────────────────────────────────
+    // ── Drag-to-create (pointer events for cross-browser reliability) ─────────
 
-    gridEl.addEventListener('mousedown', e => {
+    gridEl.addEventListener('pointerdown', e => {
       if (e.button !== 0 || isDragging) return;
-      // Ignore clicks that land on an existing block chip
-      if (e.target.closest && e.target.closest('[id^="block-"]')) return;
+      // Ignore presses on existing blocks or the create popover
+      if (e.target.closest && (
+        e.target.closest('[id^="block-"]') ||
+        e.target.closest('#create-popover')
+      )) return;
 
       const dayIdx = colAtClientX(e.clientX);
       if (dayIdx === -1) return;
@@ -393,10 +407,11 @@ const GRID = (() => {
       const startMins = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60 - SNAP_MINUTES, snapToGrid(rawMins)));
 
       dragCreate = { dayIdx, startMins, endMins: startMins + 60, moved: false };
-      e.preventDefault(); // prevent text selection while dragging
+      gridEl.setPointerCapture(e.pointerId); // receive move/up even outside the element
+      e.preventDefault();
     });
 
-    document.addEventListener('mousemove', e => {
+    gridEl.addEventListener('pointermove', e => {
       if (!dragCreate) return;
 
       const rect = gridEl.getBoundingClientRect();
@@ -406,7 +421,6 @@ const GRID = (() => {
 
       if (endMins > dragCreate.startMins + SNAP_MINUTES) dragCreate.moved = true;
 
-      // Create ghost on first move
       let ghost = document.getElementById('create-ghost');
       if (!ghost) {
         ghost = document.createElement('div');
@@ -427,7 +441,7 @@ const GRID = (() => {
       ghost.textContent  = `${minsToTimeStr(dragCreate.startMins)}–${minsToTimeStr(endMins)}`;
     });
 
-    document.addEventListener('mouseup', e => {
+    gridEl.addEventListener('pointerup', e => {
       if (!dragCreate) return;
       const { dayIdx, startMins, endMins, moved } = dragCreate;
       dragCreate = null;
