@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.name }} — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <div class="flex items-center gap-3 mb-1">
+        <h1 class="text-2xl font-bold text-gray-900">{{ plan.name }}</h1>
+        {% if plan.is_active %}
+        <span class="text-sm bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Active</span>
+        {% endif %}
+      </div>
+      <p class="text-sm text-gray-500">
+        {{ plan.total_weeks }} weeks · starts {{ plan.start_date|date:"j M Y" }}
+        {% if plan.description %} · {{ plan.description }}{% endif %}
+      </p>
+    </div>
+    <div class="flex gap-2">
+      {% if not plan.is_active %}
+      <form method="post" action="{% url 'training-plan-activate' pk=plan.pk %}">
+        {% csrf_token %}
+        <button type="submit" class="btn-indigo text-sm">Set active</button>
+      </form>
+      {% endif %}
+      <a href="{% url 'training-plan-list' %}" class="btn-outline text-sm">All plans</a>
+    </div>
+  </div>
+
+  {# Pace zones #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-900 mb-3 text-sm">Pace zones</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-sm">
+      {% for label, secs in pace_zones.items %}
+      <div class="bg-gray-50 rounded-lg p-3 text-center">
+        <div class="text-xs text-gray-500 mb-1">{{ label }}</div>
+        <div class="font-semibold text-gray-800">{{ secs }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# Week-by-week table #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr class="text-left text-xs text-gray-500">
+          <th class="px-4 py-3 font-medium">Week</th>
+          <th class="px-4 py-3 font-medium">Phase</th>
+          <th class="px-4 py-3 font-medium">Target km</th>
+          <th class="px-4 py-3 font-medium">Est. time</th>
+          <th class="px-4 py-3 font-medium">Sessions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for row in week_data %}
+        <tr class="hover:bg-gray-50 align-top">
+          <td class="px-4 py-3 font-medium text-gray-800">{{ row.week.week_number }}</td>
+          <td class="px-4 py-3">
+            <span class="text-xs px-2 py-0.5 rounded-full
+              {% if row.week.phase == 'base' %}bg-green-100 text-green-700
+              {% elif row.week.phase == 'build' %}bg-yellow-100 text-yellow-700
+              {% elif row.week.phase == 'peak' %}bg-red-100 text-red-700
+              {% elif row.week.phase == 'taper' %}bg-blue-100 text-blue-700
+              {% else %}bg-gray-100 text-gray-600{% endif %}">
+              {{ row.week.get_phase_display }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-gray-700">{{ row.week.target_km }} km</td>
+          <td class="px-4 py-3 text-gray-700">
+            {% if row.estimated_minutes %}
+            ~{{ row.estimated_minutes }}min
+            {% endif %}
+          </td>
+          <td class="px-4 py-3">
+            <div class="space-y-0.5">
+              {% for s in row.sessions %}
+              <div class="text-xs text-gray-600">
+                <span class="font-medium">{{ s.get_day_of_week_display|slice:":3" }}</span>
+                {{ s.get_run_type_display }} {{ s.target_km }}km
+                {% if s.notes %}<span class="text-gray-400">· {{ s.notes }}</span>{% endif %}
+              </div>
+              {% endfor %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {# Delete #}
+  <div class="text-right">
+    <button
+      hx-delete="{% url 'training-plan-detail' pk=plan.pk %}"
+      hx-confirm="Delete '{{ plan.name }}'? This cannot be undone."
+      hx-target="body"
+      class="text-sm text-red-500 hover:text-red-700">
+      Delete this plan
+    </button>
+  </div>
+
+</div>
+{% endblock %}

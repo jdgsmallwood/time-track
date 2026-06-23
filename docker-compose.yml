@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - db_data:/app/db
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/db/db.sqlite3
+    restart: unless-stopped
+
+  # Optional Postgres profile: docker compose --profile postgres up
+  postgres:
+    profiles: [postgres]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: timetrack
+      POSTGRES_USER: timetrack
+      POSTGRES_PASSWORD: timetrack
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timetrack"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:
+  pg_data:

@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}{{ template.name }} — TimeTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-full px-2 py-4" x-data="{ showNewBlockForm: false }">
+  <div class="flex items-center justify-between mb-4 px-2">
+    <div>
+      <a href="/schedule/templates/" class="text-sm text-indigo-600 hover:underline">← Templates</a>
+      <h1 class="text-xl font-bold text-gray-900 mt-1">{{ template.name }}</h1>
+      {% if template.description %}<p class="text-sm text-gray-500">{{ template.description }}</p>{% endif %}
+    </div>
+    <div class="flex gap-2">
+      <button @click="showNewBlockForm = !showNewBlockForm"
+        class="bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700">
+        + Add Block
+      </button>
+    </div>
+  </div>
+
+  {# Quick-add form #}
+  <div x-show="showNewBlockForm" x-cloak class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4 mx-2"
+       x-transition>
+    <h3 class="font-medium text-indigo-900 mb-3 text-sm">New Block</h3>
+    <form hx-post="/schedule/templates/{{ template.pk }}/blocks/"
+          hx-target="this"
+          hx-swap="none"
+          hx-on::after-request="if(event.detail.successful) window.location.reload()"
+          @htmx:after-request="showNewBlockForm = false"
+          class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {% csrf_token %}
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Title</label>
+        <input type="text" name="title" required class="form-input w-full text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Day</label>
+        <select name="day_of_week" class="form-select w-full text-sm mt-1">
+          <option value="0">Monday</option><option value="1">Tuesday</option>
+          <option value="2">Wednesday</option><option value="3">Thursday</option>
+          <option value="4">Friday</option><option value="5">Saturday</option>
+          <option value="6">Sunday</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Start</label>
+        <input type="time" name="start_time" value="09:00" class="form-input w-full text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">End</label>
+        <input type="time" name="end_time" value="10:00" class="form-input w-full text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Category</label>
+        <select name="category" class="form-select w-full text-sm mt-1">
+          <option value="">—</option>
+          {% for cat in categories %}<option value="{{ cat.pk }}">{{ cat.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Plugin</label>
+        <select name="plugin_slug" class="form-select w-full text-sm mt-1">
+          <option value="">None</option>
+          {% for p in plugins %}<option value="{{ p.slug }}">{{ p.icon }} {{ p.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-span-2 flex gap-2 items-end">
+        <button type="submit" class="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700">Add</button>
+        <button type="button" @click="showNewBlockForm = false" class="text-sm text-gray-500 hover:text-gray-700 px-3 py-2">Cancel</button>
+      </div>
+    </form>
+  </div>
+
+  {# The interactive week grid + slide-in edit panel #}
+  <div class="flex gap-4 mx-2">
+    <div class="flex-1 bg-white border border-gray-200 rounded-xl overflow-hidden min-w-0">
+      {% include "schedule/partials/week_grid_interactive.html" with is_template=True template=template plan_week=None %}
+    </div>
+
+    {# Edit panel — revealed when a block is clicked #}
+    <div id="edit-panel" class="hidden w-80 flex-shrink-0">
+      <div class="bg-white border border-gray-200 rounded-xl p-4 sticky top-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="text-sm font-semibold text-gray-900">Edit Block</h3>
+          <button onclick="document.getElementById('edit-panel').classList.add('hidden')"
+                  class="text-gray-400 hover:text-gray-600 text-lg leading-none">&times;</button>
+        </div>
+        <div id="edit-panel-content">
+          <p class="text-sm text-gray-400">Click a block to edit it.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const GRID_DATA = {{ grid_data|safe }};
+const IS_TEMPLATE = true;
+const OWNER_PK = {{ template.pk }};
+const BLOCK_CREATE_URL = '/schedule/templates/{{ template.pk }}/blocks/';
+const BLOCK_UPDATE_URL_TPL = '/schedule/template-blocks/';
+const WEEK_START_DATE = '';
+</script>
+<script src="/static/js/grid.js" defer></script>
+{% endblock %}

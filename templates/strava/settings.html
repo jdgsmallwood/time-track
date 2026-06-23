@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Strava — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-gray-900 mb-6">Strava Integration</h1>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-4">
+
+    <div class="flex items-center gap-3">
+      <div class="w-3 h-3 rounded-full {% if connected %}bg-green-500{% else %}bg-gray-300{% endif %}"></div>
+      <span class="font-medium text-gray-800">
+        {% if connected %}Connected as {{ athlete_name }}{% else %}Not connected{% endif %}
+      </span>
+    </div>
+
+    {% if connected %}
+    <p class="text-sm text-gray-600">
+      When viewing a concrete week, use the <strong>🚴 Sync Strava</strong> button to pull
+      your actual run distances and paces from Strava into the week's RunSession blocks.
+    </p>
+    <form method="post" action="{% url 'strava-disconnect' %}">
+      {% csrf_token %}
+      <button type="submit"
+        class="text-sm text-red-500 hover:text-red-700 border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50">
+        Disconnect Strava
+      </button>
+    </form>
+    {% else %}
+    <p class="text-sm text-gray-600">
+      Connect your Strava account to automatically pull actual run distances and paces
+      into your weekly blocks after each run.
+    </p>
+    <p class="text-xs text-gray-500">
+      You'll need <code class="bg-gray-100 px-1 rounded">STRAVA_CLIENT_ID</code> and
+      <code class="bg-gray-100 px-1 rounded">STRAVA_CLIENT_SECRET</code> set in your
+      <code class="bg-gray-100 px-1 rounded">.env</code> file. Create a Strava API
+      application at <code class="bg-gray-100 px-1 rounded">strava.com/settings/api</code>.
+    </p>
+    <a href="{% url 'strava-connect' %}"
+       class="inline-block btn-indigo text-sm">
+      Connect Strava →
+    </a>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}

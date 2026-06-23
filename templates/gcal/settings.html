@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Google Calendar — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto px-4 py-8">
+  <h1 class="text-2xl font-bold text-gray-900 mb-6">Google Calendar</h1>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+    {% if connected %}
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-3 h-3 rounded-full bg-green-500"></div>
+      <span class="font-medium text-gray-900">Connected</span>
+    </div>
+    <p class="text-sm text-gray-600 mb-1">Target calendar ID:</p>
+    <p class="text-sm font-mono text-gray-800 mb-4">{{ creds.target_calendar_id|default:"primary" }}</p>
+
+    <form method="post" action="/gcal/calendar-pick/" class="mb-4">
+      {% csrf_token %}
+      <label class="block text-sm font-medium text-gray-700 mb-1">Change target calendar ID</label>
+      <div class="flex gap-2">
+        <input type="text" name="calendar_id" value="{{ creds.target_calendar_id }}"
+          placeholder="primary or calendar ID"
+          class="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        <button type="submit" class="bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700">
+          Save
+        </button>
+      </div>
+    </form>
+
+    <form method="post" action="/gcal/disconnect/">
+      {% csrf_token %}
+      <button type="submit"
+        class="text-sm text-red-500 hover:text-red-700 border border-red-200 rounded-lg px-4 py-2 hover:bg-red-50">
+        Disconnect Google Calendar
+      </button>
+    </form>
+    {% else %}
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-3 h-3 rounded-full bg-gray-300"></div>
+      <span class="text-gray-600">Not connected</span>
+    </div>
+    <p class="text-sm text-gray-500 mb-4">
+      Connect your Google account to push week plans to Google Calendar.
+      You'll need to set up OAuth credentials in Google Cloud Console first.
+    </p>
+    <a href="/gcal/connect/"
+       class="inline-block bg-indigo-600 text-white text-sm font-medium px-5 py-2 rounded-lg hover:bg-indigo-700">
+      Connect Google Calendar
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

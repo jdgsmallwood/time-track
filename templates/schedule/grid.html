@@ -1,0 +1,65 @@
+{# Reusable week grid partial — include with is_template, grid_data, days, week_obj, template_obj #}
+{% load static %}
+
+<div id="week-grid"
+     class="relative"
+     x-data="weekGrid({{ grid_data }}, {{ is_template|lower }}, {% if is_template %}{{ template.pk }}{% else %}{{ plan_week.pk }}{% endif %})"
+     x-init="init()">
+
+  {# Day headers #}
+  <div class="grid grid-cols-8 border-b border-gray-200 bg-white sticky top-0 z-10">
+    <div class="py-2 px-2 text-xs text-gray-400 font-medium border-r border-gray-100"></div>
+    {% for day in days %}
+    <div class="py-2 px-1 text-center border-r border-gray-100 last:border-r-0">
+      <div class="text-xs font-semibold text-gray-700">{{ day|date:"D" }}</div>
+      <div class="text-xs text-gray-400">{{ day|date:"j M" }}</div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {# Time grid #}
+  <div class="relative" style="height:{{ grid_height }}px">
+    {# Hour lines + labels #}
+    {% for hour in hours %}
+    <div class="absolute w-full flex" style="top:{{ hour.top }}px">
+      <div class="w-14 flex-shrink-0 text-right pr-2 text-xs text-gray-400 -mt-2.5 select-none">
+        {{ hour.label }}
+      </div>
+      <div class="flex-1 border-t border-gray-100"></div>
+    </div>
+    {% endfor %}
+
+    {# Day column drop zones #}
+    <div class="absolute inset-0 ml-14 grid grid-cols-7">
+      {% for day in days %}
+      <div class="border-r border-gray-100 last:border-r-0 relative"
+           data-col="{{ forloop.counter0 }}"
+           @click="onColumnClick($event, {{ forloop.counter0 }})">
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Block chips rendered by Alpine from grid_data #}
+    <template x-for="block in blocks" :key="block.id">
+      <div class="absolute rounded-lg px-2 py-1 cursor-pointer shadow-sm border border-white/30 select-none block-chip overflow-hidden"
+           :id="'block-' + block.id"
+           :style="blockStyle(block)"
+           :data-block-id="block.id"
+           @click.stop="openEditPanel(block)"
+           x-html="blockInnerHtml(block)">
+      </div>
+    </template>
+  </div>
+</div>
+
+{# Edit panel (slides in from right) #}
+<div id="edit-panel" class="hidden fixed top-0 right-0 h-full w-80 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+    <h3 class="font-semibold text-gray-900 text-sm">Edit Block</h3>
+    <button onclick="document.getElementById('edit-panel').classList.add('hidden')"
+      class="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+  </div>
+  <div id="edit-panel-content" class="flex-1 overflow-y-auto p-4">
+    <p class="text-sm text-gray-400">Select a block to edit</p>
+  </div>
+</div>

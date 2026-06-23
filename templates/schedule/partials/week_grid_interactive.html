@@ -1,0 +1,18 @@
+{# Shared interactive grid partial — grid body only; rendered by grid.js #}
+<div id="week-grid-outer" class="relative overflow-x-auto">
+  <div class="min-w-[700px]">
+    {# Day headers #}
+    <div class="grid border-b border-gray-200 bg-gray-50"
+         style="grid-template-columns: 56px repeat(7, 1fr)">
+      <div class="py-2"></div>
+      {% for day_name in day_names %}
+      <div class="py-2 px-1 text-center border-l border-gray-100">
+        <div class="text-xs font-semibold text-gray-600">{{ day_name }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# Grid body — height set by grid.js #}
+    <div id="week-grid" class="relative" style="height:1020px"></div>
+  </div>
+</div>

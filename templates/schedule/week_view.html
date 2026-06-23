@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block title %}Week {{ start_date }} — TimeTrack{% endblock %}
+
+{% block content %}
+<div class="max-w-full px-2 py-4" x-data="{
+    showCloneForm: false,
+    showNewBlockForm: false,
+    showCopyForm: false,
+    showStats: false,
+    activeDay: {{ start_date|date:'w'|add:'-1' }},
+    days: {{ days|length }}
+  }">
+
+  {# ── Header ── #}
+  <div class="flex items-start justify-between mb-3 px-2 flex-wrap gap-2">
+    <div class="flex items-center gap-2 min-w-0">
+      <a href="/schedule/weeks/{{ prev_monday }}/"
+         class="text-gray-400 hover:text-indigo-600 transition-colors text-xl px-1">←</a>
+      <div class="min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h1 class="text-lg font-bold text-gray-900 whitespace-nowrap">
+            {{ start_date|date:"j M" }} – {{ days|last|date:"j M Y" }}
+          </h1>
+          {% if plan_week %}
+          <span class="text-xs px-2 py-0.5 rounded-full whitespace-nowrap
+            {% if plan_week.status == 'synced' %}bg-green-100 text-green-700
+            {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+            {{ plan_week.status }}{% if plan_week.source_template %} · {{ plan_week.source_template.name }}{% endif %}
+          </span>
+          {% endif %}
+        </div>
+        <p class="text-xs text-gray-400 mt-0.5">{{ time_zone }}</p>
+      </div>
+      <a href="/schedule/weeks/{{ next_monday }}/"
+         class="text-gray-400 hover:text-indigo-600 transition-colors text-xl px-1">→</a>
+    </div>
+
+    {# Action buttons — scroll on small screens #}
+    <div class="flex gap-1.5 flex-wrap items-center">
+      {% if plan_week %}
+      <button @click="showStats = !showStats"
+        class="btn-ghost text-xs">📊 Stats</button>
+      {% endif %}
+      <button @click="showNewBlockForm = !showNewBlockForm"
+        class="btn-indigo text-xs">+ Block</button>
+      {% if not plan_week %}
+      <button @click="showCloneForm = !showCloneForm"
+        class="btn-outline text-xs">Clone template</button>
+      {% else %}
+      <button @click="showCloneForm = !showCloneForm"
+        class="btn-outline text-xs">Re-clone</button>
+      <button @click="showCopyForm = !showCopyForm"
+        class="btn-outline text-xs">Copy → next week</button>
+      <form method="post" action="/schedule/plan-weeks/{{ plan_week.pk }}/push/"
+            hx-post="/schedule/plan-weeks/{{ plan_week.pk }}/push/"
+            hx-target="#gcal-status" hx-swap="innerHTML" class="inline">
+        {% csrf_token %}
+        <button type="submit" class="btn-green text-xs">↑ Google Cal</button>
+      </form>
+      {% if strava_connected and plan_week %}
+      <button hx-post="{% url 'strava-week-sync' week_pk=plan_week.pk %}"
+              hx-target="#strava-sync-result"
+              hx-swap="innerHTML"
+              class="btn-outline text-xs">🚴 Sync Strava</button>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {# GCal status / Strava sync result #}
+  <div id="gcal-status" class="px-2 mb-1"></div>
+  <div id="strava-sync-result" class="px-2 mb-1 text-sm text-green-700"></div>
+
+  {# ── Training plan banner ── #}
+  {% if current_plan_week %}
+  <div class="mx-2 mb-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-3 text-sm">
+    <span class="text-blue-600">📋</span>
+    <span class="text-blue-800 font-medium">
+      Week {{ current_plan_week.week_number }} of {{ active_plan.total_weeks }}
+      · <span class="capitalize">{{ current_plan_week.phase }}</span> phase
+      · {{ current_plan_week.target_km }} km target
+      {% if plan_estimated_minutes %}· ~{{ plan_estimated_minutes }}min{% endif %}
+    </span>
+    <a href="{% url 'training-plan-detail' pk=active_plan.pk %}"
+       class="ml-auto text-blue-600 hover:underline text-xs">View plan →</a>
+  </div>
+  {% endif %}
+
+  {# ── Stats panel ── #}
+  {% if plan_week and stats %}
+  <div x-show="showStats" x-cloak x-transition
+       class="bg-white border border-gray-200 rounded-xl p-4 mb-4 mx-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+    {# Hours by category #}
+    <div>
+      <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Hours by category</h3>
+      <div class="space-y-1">
+        {% for cat, hrs in stats.hours_by_cat.items %}
+        <div class="flex items-center gap-2">
+          <div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div class="h-2 rounded-full bg-indigo-400"
+                 style="width:{{ hrs|floatformat:0 }}0%"></div>
+          </div>
+          <span class="text-xs text-gray-600 w-28 truncate">{{ cat }}</span>
+          <span class="text-xs font-medium text-gray-800 w-8 text-right">{{ hrs|floatformat:1 }}h</span>
+        </div>
+        {% endfor %}
+        <div class="pt-1 border-t border-gray-100 text-xs font-semibold text-gray-700">
+          Total: {{ stats.total_hours|floatformat:1 }}h planned
+        </div>
+      </div>
+    </div>
+
+    {# Running stats #}
+    <div>
+      <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">🏃 Running</h3>
+      {% if stats.run.session_count %}
+      <div class="space-y-1 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-600">Planned km</span>
+          <span class="font-semibold text-gray-800">{{ stats.run.total_planned_km }}</span>
+        </div>
+        {% if stats.run.total_actual_km %}
+        <div class="flex justify-between">
+          <span class="text-gray-600">Actual km</span>
+          <span class="font-semibold text-green-700">{{ stats.run.total_actual_km }}</span>
+        </div>
+        {% endif %}
+        {% for rtype, km in stats.run.km_by_type.items %}
+        <div class="flex justify-between text-xs text-gray-500">
+          <span>{{ rtype }}</span><span>{{ km }} km</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-gray-400">No runs this week</p>
+      {% endif %}
+    </div>
+
+    {# Practice stats — per instrument #}
+    <div>
+      <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">🎵 Practice</h3>
+      {% if stats.practice %}
+      <div class="space-y-2">
+        {% for instrument, mins in stats.practice.items %}
+        <div>
+          <div class="text-xs font-medium text-gray-700">{{ instrument }}</div>
+          <div class="flex gap-3 text-xs text-gray-500">
+            <span>Planned: {{ mins.planned }}min</span>
+            {% if mins.actual %}<span class="text-green-600">Done: {{ mins.actual }}min</span>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-xs text-gray-400">No practice sessions this week</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── Clone form ── #}
+  <div x-show="showCloneForm" x-cloak x-transition
+       class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-3 mx-2">
+    <h3 class="font-medium text-indigo-900 mb-3 text-sm">Clone from Template</h3>
+    <form method="post" action="/schedule/weeks/{{ start_date }}/" class="flex gap-3 items-end flex-wrap">
+      {% csrf_token %}
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Template</label>
+        <select name="template" class="form-select text-sm mt-1 block">
+          {% for t in clone_form.template.field.queryset %}
+          <option value="{{ t.pk }}">{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <label class="flex items-center gap-2 text-sm text-indigo-800 pb-1">
+        <input type="checkbox" name="replace"> Replace existing blocks
+      </label>
+      <button type="submit" class="btn-indigo text-sm">Clone</button>
+      <button type="button" @click="showCloneForm = false" class="text-sm text-gray-500 px-3 py-2">Cancel</button>
+    </form>
+  </div>
+
+  {# ── Copy-forward form ── #}
+  {% if plan_week %}
+  <div x-show="showCopyForm" x-cloak x-transition
+       class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3 mx-2">
+    <h3 class="font-medium text-blue-900 mb-2 text-sm">Copy to next week ({{ next_monday }})</h3>
+    <p class="text-xs text-blue-700 mb-3">Copies all blocks from this week forward by 7 days, including plugin data.</p>
+    <form method="post" action="/schedule/plan-weeks/{{ plan_week.pk }}/copy-forward/" class="flex gap-3 items-center flex-wrap">
+      {% csrf_token %}
+      <label class="flex items-center gap-2 text-sm text-blue-800">
+        <input type="checkbox" name="replace" value="1"> Replace existing blocks in target week
+      </label>
+      <button type="submit" class="btn-indigo text-sm">Copy forward</button>
+      <button type="button" @click="showCopyForm = false" class="text-sm text-gray-500 px-3 py-2">Cancel</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {# ── New block form ── #}
+  <div x-show="showNewBlockForm" x-cloak x-transition
+       class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-3 mx-2">
+    {% if plan_week %}
+    <h3 class="font-medium text-indigo-900 mb-3 text-sm">New Block</h3>
+    <form hx-post="/schedule/plan-weeks/{{ plan_week.pk }}/blocks/"
+          hx-target="body" hx-swap="none"
+          @htmx:after-request="showNewBlockForm = false; window.location.reload()"
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+      {% csrf_token %}
+      <div class="col-span-2 sm:col-span-1">
+        <label class="text-xs text-indigo-700 font-medium">Title</label>
+        <input type="text" name="title" required class="form-input w-full text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Date</label>
+        <select name="date" class="form-select w-full text-sm mt-1">
+          {% for d in days %}
+          <option value="{{ d|date:'Y-m-d' }}">{{ d|date:"D j M" }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Start</label>
+        <input type="time" name="start_time" value="09:00" class="form-input w-full text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">End</label>
+        <input type="time" name="end_time" value="10:00" class="form-input w-full text-sm mt-1">
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Category</label>
+        <select name="category" class="form-select w-full text-sm mt-1">
+          <option value="">—</option>
+          {% for cat in categories %}<option value="{{ cat.pk }}">{{ cat.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-indigo-700 font-medium">Plugin</label>
+        <select name="plugin_slug" class="form-select w-full text-sm mt-1">
+          <option value="">None</option>
+          {% for p in plugins %}<option value="{{ p.slug }}">{{ p.icon }} {{ p.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-span-2 flex gap-2 items-end">
+        <button type="submit" class="btn-indigo text-sm">Add</button>
+        <button type="button" @click="showNewBlockForm = false" class="text-sm text-gray-500 px-3 py-2">Cancel</button>
+      </div>
+    </form>
+    {% else %}
+    <p class="text-sm text-indigo-700">Clone a template first to create a week, then add blocks.</p>
+    {% endif %}
+  </div>
+
+  {# ── Mobile day picker (hidden on md+) ── #}
+  <div class="md:hidden mb-3 mx-2">
+    <div class="flex gap-1 overflow-x-auto pb-1">
+      {% for d in days %}
+      <button
+        @click="activeDay = {{ forloop.counter0 }}"
+        :class="activeDay === {{ forloop.counter0 }}
+          ? 'bg-indigo-600 text-white'
+          : 'bg-white text-gray-700 border border-gray-200'"
+        class="flex-shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition-colors">
+        <div>{{ d|date:"D" }}</div>
+        <div class="font-normal">{{ d|date:"j" }}</div>
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# ── Mobile block list (hidden on md+) ── #}
+  <div class="md:hidden mx-2 mb-4 space-y-2" id="mobile-block-list">
+    {% if plan_week %}
+      {% for d in days %}
+      <div x-show="activeDay === {{ forloop.counter0 }}">
+        <div class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{{ d|date:"l j F" }}</div>
+        {% with dow=forloop.counter0 %}
+        {% for block in plan_week.blocks.all %}
+        {% if block.date == d %}
+        <div class="bg-white border border-gray-200 rounded-xl p-3 mb-2 cursor-pointer hover:border-indigo-300 transition-colors"
+             hx-get="/schedule/plan-blocks/{{ block.pk }}/"
+             hx-target="#edit-panel-content"
+             hx-swap="innerHTML"
+             @click="document.getElementById('edit-panel').classList.remove('hidden')"
+             style="border-left: 3px solid {{ block.category.color|default:'#6366f1' }}">
+          <div class="flex items-center justify-between">
+            <span class="font-semibold text-sm text-gray-900">{{ block.title }}</span>
+            <span class="text-xs text-gray-400">{{ block.start_time|time:"H:i" }}–{{ block.end_time|time:"H:i" }}</span>
+          </div>
+          {% if block.category %}
+          <span class="text-xs text-gray-500">{{ block.category.icon }} {{ block.category.name }}</span>
+          {% endif %}
+          {% if block.plugin_slug == "running" %}{% with s=block.run_session %}{% if s %}
+          <div class="text-xs text-green-700 mt-1">🏃 {{ s.get_run_type_display }} · {{ s.planned_km|default:"?" }} km</div>
+          {% endif %}{% endwith %}{% endif %}
+          {% if block.plugin_slug == "practice" %}{% with s=block.practice_session %}{% if s %}
+          <div class="text-xs text-purple-700 mt-1">🎵 {{ s.instrument|default:"Practice" }} · {{ s.get_focus_display }}</div>
+          {% endif %}{% endwith %}{% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        {% endwith %}
+      </div>
+      {% endfor %}
+    {% else %}
+    <div class="text-center py-8 text-gray-400 text-sm">
+      No blocks yet — clone a template or add a block above.
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── Desktop week grid (hidden on mobile) ── #}
+  <div class="hidden md:block bg-white border border-gray-200 rounded-xl overflow-hidden mx-2">
+    {# Day column headers with actual dates #}
+    <div class="grid border-b border-gray-200 bg-gray-50"
+         style="grid-template-columns: 56px repeat(7, 1fr)">
+      <div class="py-2 text-xs text-gray-400 pl-1">{{ time_zone }}</div>
+      {% for d in days %}
+      <div class="py-2 px-1 text-center border-l border-gray-100">
+        <div class="text-xs font-semibold text-gray-600">{{ d|date:"D" }}</div>
+        <div class="text-xs text-gray-400">{{ d|date:"j M" }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    <div id="week-grid" class="relative" style="height:1020px"></div>
+  </div>
+</div>
+
+{# ── Edit panel (slide-in, works on both mobile and desktop) ── #}
+<div id="edit-panel"
+     class="hidden fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-2xl border-l border-gray-200 z-50 flex flex-col">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
+    <h3 class="font-semibold text-gray-900 text-sm">Edit Block</h3>
+    <button onclick="document.getElementById('edit-panel').classList.add('hidden')"
+      class="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+  </div>
+  <div id="edit-panel-content" class="flex-1 overflow-y-auto p-4 overscroll-contain"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const GRID_DATA = {{ grid_data|safe }};
+const IS_TEMPLATE = false;
+{% if plan_week %}
+const OWNER_PK = {{ plan_week.pk }};
+const BLOCK_CREATE_URL = '/schedule/plan-weeks/{{ plan_week.pk }}/blocks/';
+const WEEK_START_DATE = '{{ plan_week.start_date|date:"Y-m-d" }}';
+{% else %}
+const OWNER_PK = null;
+const BLOCK_CREATE_URL = '';
+const WEEK_START_DATE = '';
+{% endif %}
+const BLOCK_UPDATE_URL_TPL = '/schedule/plan-blocks/';
+</script>
+<script src="/static/js/grid.js" defer></script>
+{% endblock %}

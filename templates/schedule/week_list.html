@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}All Weeks — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">All Weeks</h1>
+    <a href="/schedule/weeks/current/"
+       class="bg-indigo-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-indigo-700">
+      Go to This Week
+    </a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 divide-y divide-gray-100">
+    {% for w in weeks %}
+    <a href="/schedule/weeks/{{ w.start_date }}/"
+       class="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors group">
+      <div class="flex-1">
+        <div class="font-semibold text-gray-900 group-hover:text-indigo-700 text-sm">
+          {{ w.start_date }} – {{ w.end_date }}
+        </div>
+        {% if w.source_template %}
+        <div class="text-xs text-gray-400 mt-0.5">from: {{ w.source_template.name }}</div>
+        {% endif %}
+      </div>
+      <span class="text-xs px-2 py-1 rounded-full
+        {% if w.status == 'synced' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">
+        {{ w.status }}
+      </span>
+      <span class="text-sm text-gray-400">{{ w.blocks.count }} block{{ w.blocks.count|pluralize }} →</span>
+    </a>
+    {% empty %}
+    <p class="px-5 py-8 text-center text-sm text-gray-500">No planned weeks yet. <a href="/schedule/weeks/current/" class="text-indigo-600 hover:underline">Start with this week.</a></p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

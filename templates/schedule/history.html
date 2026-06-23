@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}History — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Week History</h1>
+    <a href="{% url 'week-current' %}" class="btn-indigo text-sm">This week →</a>
+  </div>
+
+  {% if rows %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr class="text-left text-xs text-gray-500">
+          <th class="px-4 py-3 font-medium">Week</th>
+          <th class="px-4 py-3 font-medium">Status</th>
+          <th class="px-4 py-3 font-medium">Hours</th>
+          <th class="px-4 py-3 font-medium">Top categories</th>
+          <th class="px-4 py-3 font-medium">Running</th>
+          <th class="px-4 py-3 font-medium">Practice</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for row in rows %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-3 font-medium">
+            <a href="{% url 'week-view' start_date=row.week.start_date|date:'Y-m-d' %}"
+               class="text-indigo-700 hover:underline">
+              {{ row.week.start_date|date:"j M Y" }}
+            </a>
+          </td>
+          <td class="px-4 py-3">
+            <span class="text-xs px-1.5 py-0.5 rounded-full
+              {% if row.week.status == 'synced' %}bg-green-100 text-green-700
+              {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+              {{ row.week.status }}
+            </span>
+          </td>
+          <td class="px-4 py-3 text-gray-700">{{ row.stats.total_hours|floatformat:1 }}h</td>
+          <td class="px-4 py-3 text-gray-600 text-xs">
+            {% for cat, hrs in row.stats.hours_by_cat.items %}{% if forloop.counter <= 3 %}
+            <span class="mr-2">{{ cat }} {{ hrs|floatformat:1 }}h</span>
+            {% endif %}{% endfor %}
+          </td>
+          <td class="px-4 py-3">
+            {% if row.stats.run.session_count %}
+            <div class="flex items-center gap-2">
+              <div class="text-gray-700 text-xs whitespace-nowrap">
+                {{ row.stats.run.total_planned_km|floatformat:1 }} km
+                {% if row.stats.run.total_actual_km %}/ {{ row.stats.run.total_actual_km|floatformat:1 }}{% endif %}
+              </div>
+              <div class="flex-1 bg-gray-200 rounded-full h-1.5 min-w-8">
+                <div class="bg-blue-500 h-1.5 rounded-full" style="width: {{ row.km_pct }}%"></div>
+              </div>
+            </div>
+            {% else %}
+            <span class="text-gray-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-3 text-xs text-gray-600">
+            {% for instrument, mins in row.stats.practice.items %}
+            <div>{{ instrument }}: {{ mins.planned }}min</div>
+            {% empty %}
+            <span class="text-gray-300">—</span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+    <p class="text-gray-400">No planned weeks yet.</p>
+    <a href="{% url 'week-current' %}" class="mt-4 inline-block btn-indigo">Plan this week</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

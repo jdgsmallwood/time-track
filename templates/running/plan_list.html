@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Training Plans — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-2xl font-bold text-gray-900">Running Training Plans</h1>
+  </div>
+
+  {# ── Import form ────────────────────────────────────────────────────────── #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="font-semibold text-gray-900 mb-1">Import a plan</h2>
+    <p class="text-xs text-gray-500 mb-4">
+      Paste CSV text below or upload a file. See the
+      <a href="#format-help" class="text-indigo-600 hover:underline">format guide</a>.
+    </p>
+    <form method="post" action="{% url 'training-plan-import' %}" enctype="multipart/form-data" class="space-y-3">
+      {% csrf_token %}
+      <textarea name="csv_text" rows="8" placeholder="name,My 12-week plan&#10;start_date,2024-09-02&#10;pace_easy,6:00&#10;pace_tempo,5:00&#10;pace_long,6:30&#10;&#10;week,phase,target_km,day,type,km,notes&#10;1,base,40,1,easy,10,Morning run&#10;1,base,40,3,tempo,6,Track&#10;1,base,40,6,long,14,Long easy"
+             class="form-input w-full resize-y font-mono text-xs"></textarea>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn-indigo text-sm">Import plan</button>
+        <label class="text-sm text-gray-600 flex items-center gap-2 cursor-pointer">
+          <span>or upload file:</span>
+          <input type="file" name="csv_file" accept=".csv,.txt" class="text-sm text-gray-500">
+        </label>
+      </div>
+    </form>
+  </div>
+
+  {# ── Existing plans ─────────────────────────────────────────────────────── #}
+  {% if plans %}
+  <div class="space-y-3">
+    {% for plan in plans %}
+    <div class="bg-white rounded-xl shadow-sm border {% if plan.is_active %}border-blue-300{% else %}border-gray-200{% endif %} p-5">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <a href="{% url 'training-plan-detail' pk=plan.pk %}"
+               class="font-semibold text-gray-900 hover:text-indigo-700">
+              {{ plan.name }}
+            </a>
+            {% if plan.is_active %}
+            <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Active</span>
+            {% endif %}
+          </div>
+          <p class="text-sm text-gray-500 mt-0.5">
+            {{ plan.total_weeks }} weeks · starts {{ plan.start_date|date:"j M Y" }}
+            {% if plan.description %} · {{ plan.description }}{% endif %}
+          </p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          {% if not plan.is_active %}
+          <form method="post" action="{% url 'training-plan-activate' pk=plan.pk %}">
+            {% csrf_token %}
+            <button type="submit" class="btn-outline text-xs">Set active</button>
+          </form>
+          {% endif %}
+          <a href="{% url 'training-plan-detail' pk=plan.pk %}" class="btn-ghost text-xs">View</a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="text-sm text-gray-400">No training plans yet. Import one above.</p>
+  {% endif %}
+
+  {# ── Format help ────────────────────────────────────────────────────────── #}
+  <div id="format-help" class="bg-gray-50 rounded-xl border border-gray-200 p-5">
+    <h3 class="font-semibold text-gray-800 mb-2 text-sm">CSV Format</h3>
+    <p class="text-xs text-gray-600 mb-3">
+      The file has two sections separated by a blank line: a <strong>header</strong>
+      (key,value pairs) then <strong>session rows</strong>.
+    </p>
+    <pre class="text-xs text-gray-700 bg-white border border-gray-200 rounded p-3 overflow-x-auto">name,My 12-week 5K plan
+start_date,2024-09-02
+description,Base into peak (optional)
+pace_easy,6:00
+pace_tempo,5:00
+pace_interval,4:30
+pace_long,6:30
+pace_recovery,7:00
+
+week,phase,target_km,day,type,km,notes
+1,base,40,1,easy,10,Easy morning run
+1,base,40,3,tempo,6,Track session
+1,base,40,6,long,14,Long easy run
+2,base,42,1,easy,10,</pre>
+    <p class="text-xs text-gray-500 mt-2">
+      <strong>day:</strong> 0=Mon … 6=Sun &nbsp;·&nbsp;
+      <strong>phase:</strong> base / build / peak / taper / recovery &nbsp;·&nbsp;
+      <strong>type:</strong> base / easy / tempo / intervals / long / recovery / race
+    </p>
+  </div>
+
+</div>
+{% endblock %}
