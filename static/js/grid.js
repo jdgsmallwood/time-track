@@ -96,6 +96,7 @@ const GRID = (() => {
     `;
 
     el.addEventListener('click', (e) => {
+      if (isDragging) return; // drag-end fires click in some browsers; ignore it
       e.stopPropagation();
       openEditPanel(block.id);
     });
@@ -163,7 +164,18 @@ const GRID = (() => {
             block.end_time = newEnd;
 
             updateBlockPosition(block);
-            patchBlock(block, { day_of_week: newDay, start_time: newStart, end_time: newEnd });
+
+            // Plan-week blocks are keyed by date not day_of_week; derive the
+            // new date from WEEK_START_DATE + day index.
+            if (IS_TEMPLATE) {
+              patchBlock(block, { day_of_week: newDay, start_time: newStart, end_time: newEnd });
+            } else {
+              const weekStart = new Date(WEEK_START_DATE + 'T00:00:00');
+              const newDate = new Date(weekStart.getTime() + newDay * 86400000);
+              const newDateStr = newDate.toISOString().slice(0, 10);
+              block.date = newDateStr;
+              patchBlock(block, { date: newDateStr, start_time: newStart, end_time: newEnd });
+            }
           },
         },
       })
@@ -233,8 +245,8 @@ const GRID = (() => {
       line.className = 'absolute w-full flex items-center pointer-events-none';
       line.style.top = top + 'px';
       line.innerHTML = `
-        <div class="w-14 flex-shrink-0 text-right pr-2 text-xs text-gray-300 -mt-2 select-none">${hour}:00</div>
-        <div class="flex-1 border-t border-gray-100"></div>
+        <div class="w-14 flex-shrink-0 text-right pr-2 text-xs text-gray-400 -mt-2 select-none">${hour}:00</div>
+        <div class="flex-1 border-t border-gray-200"></div>
       `;
       gridEl.appendChild(line);
     }
@@ -245,7 +257,7 @@ const GRID = (() => {
     colContainer.className = 'absolute inset-0 ml-14 grid grid-cols-7 pointer-events-none';
     for (let i = 0; i < 7; i++) {
       const col = document.createElement('div');
-      col.className = 'border-r border-gray-100 last:border-r-0 h-full';
+      col.className = 'border-r border-gray-200 last:border-r-0 h-full';
       col.dataset.col = i;
       colContainer.appendChild(col);
     }
@@ -484,6 +496,15 @@ const GRID = (() => {
     }
 
     addGridClickHandler();
+
+    // Keep the sticky day-header in sync when the grid is scrolled horizontally
+    const headerOuter = document.getElementById('week-header-outer');
+    const gridOuter   = document.getElementById('week-grid-outer');
+    if (headerOuter && gridOuter) {
+      gridOuter.addEventListener('scroll', () => {
+        headerOuter.scrollLeft = gridOuter.scrollLeft;
+      }, { passive: true });
+    }
   }
 
   function updateBlock(blockData) {
