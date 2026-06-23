@@ -84,6 +84,12 @@ def week_page(authenticated_page, week_url, plan_week):
 
 
 @pytest.fixture
+def category(transactional_db):
+    from timetrack.core.models import Category
+    return Category.objects.create(name='Work', color='#e5534b', icon='')
+
+
+@pytest.fixture
 def week_page_with_block(authenticated_page, week_url, plan_week_with_block):
     """Authenticated page for block-edit tests: block created first, then page loads."""
     plan_week, block = plan_week_with_block
@@ -94,3 +100,14 @@ def week_page_with_block(authenticated_page, week_url, plan_week_with_block):
         "typeof GRID !== 'undefined' && typeof GRID.updateBlock === 'function'"
     )
     return authenticated_page, block
+
+
+@pytest.fixture
+def week_page_with_category(authenticated_page, week_url, plan_week, category):
+    """Week page pre-loaded with at least one category in the DB."""
+    authenticated_page.goto(week_url)
+    authenticated_page.wait_for_selector('#week-grid', state='visible')
+    authenticated_page.wait_for_function(
+        "typeof GRID !== 'undefined' && Array.isArray(CATEGORIES) && CATEGORIES.length > 0"
+    )
+    return authenticated_page, category

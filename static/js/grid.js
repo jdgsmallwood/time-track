@@ -405,7 +405,15 @@ const GRID = (() => {
           headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
           body: JSON.stringify(body),
         });
-        if (resp.ok) window.location.reload();
+        if (resp.ok) {
+          // The response is a <script> that calls GRID.updateBlock(data) —
+          // the same path used by the edit-panel save. Execute it directly
+          // instead of reloading the whole page.
+          const html = await resp.text();
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const script = doc.querySelector('script');
+          if (script) new Function(script.textContent)();
+        }
       } catch(e) { console.error('Create block failed', e); }
       removeCreatePopover();
     };
