@@ -1,9 +1,6 @@
-{# Shared interactive grid partial — grid body only; rendered by grid.js #}
 <div class="relative">
-  {# Day header sits OUTSIDE the overflow-x container so position:sticky works
-     vertically. JS syncs its scrollLeft with #week-grid-outer on scroll. #}
   <div id="week-header-outer"
-       class="sticky top-0 z-10 overflow-x-hidden bg-gray-50 border-b border-gray-200 shadow-sm">
+       class="sticky top-0 z-10 overflow-x-hidden bg-gray-50 border-b border-gray-200">
     <div class="min-w-[700px]">
       <div class="grid" style="grid-template-columns: 56px repeat(7, 1fr)">
         <div class="py-2"></div>
@@ -16,7 +13,6 @@
     </div>
   </div>
 
-  {# Grid body — scrolls horizontally only #}
   <div id="week-grid-outer" class="relative overflow-x-auto">
     <div class="min-w-[700px]">
       <div id="week-grid" class="relative" style="height:1020px"></div>
