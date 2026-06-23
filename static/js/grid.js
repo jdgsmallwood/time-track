@@ -203,10 +203,20 @@ const GRID = (() => {
             const newEnd = minsToTimeStr(Math.min(END_HOUR * 60, startMins + Math.max(15, durationMins)));
             block.end_time = newEnd;
             el.style.height = `${durationMins * SLOT_PX}px`;
+            refreshBlockContent(el, block);
             patchBlock(block, { end_time: newEnd });
           },
         },
       });
+  }
+
+  function refreshBlockContent(el, block) {
+    const dur = minutesSinceMidnight(block.end_time) - minutesSinceMidnight(block.start_time);
+    el.innerHTML = `
+      <div class="font-semibold text-xs leading-tight truncate">${block.title}</div>
+      ${dur > 30 ? `<div class="text-xs opacity-80">${block.start_time}–${block.end_time}</div>` : ''}
+      ${block.plugin_slug ? `<div class="text-xs opacity-70">${block.plugin_slug}</div>` : ''}
+    `;
   }
 
   function updateBlockPosition(block) {
@@ -216,6 +226,7 @@ const GRID = (() => {
     el.style.height = heightForDuration(block.start_time, block.end_time) + 'px';
     el.style.left = (getColumnLeft(block.day_of_week) + 2) + 'px';
     el.style.width = (getColumnWidth() - 4) + 'px';
+    refreshBlockContent(el, block);
   }
 
   async function patchBlock(block, fields) {
