@@ -13,6 +13,9 @@ from .views import (
     TemplateBlockUpdateView,
     TemplateWeekDetailView,
     TemplateWeekListView,
+    WeeklyTaskDeleteView,
+    WeeklyTaskListView,
+    WeeklyTaskToggleView,
 )
 
 urlpatterns = [
@@ -30,4 +33,8 @@ urlpatterns = [
     path("plan-weeks/<int:week_pk>/push/", PushToGCalView.as_view(), name="push-gcal"),
     path("plan-weeks/<int:week_pk>/copy-forward/", CopyWeekForwardView.as_view(), name="copy-week-forward"),
     path("history/", PlanWeekHistoryView.as_view(), name="week-history"),
+    # Weekly tasks
+    path("weekly-tasks/", WeeklyTaskListView.as_view(), name="weekly-tasks"),
+    path("weekly-tasks/<int:pk>/delete/", WeeklyTaskDeleteView.as_view(), name="weekly-task-delete"),
+    path("weekly-tasks/<int:pk>/toggle/", WeeklyTaskToggleView.as_view(), name="weekly-task-toggle"),
 ]

@@ -310,6 +310,7 @@ const GRID = (() => {
   // ── Click-to-create popover ──────────────────────────────────────────────
 
   let isDragging = false;
+  let suggestionDrag = null; // { task, chip, startX, startY, moved }
   // Set to true by showCreatePopover so the document outside-click handler
   // ignores the very click that opened the popover (which also bubbles to document).
   let suppressNextOutsideClose = false;
@@ -320,7 +321,25 @@ const GRID = (() => {
     if (el) el.remove();
   }
 
-  function showCreatePopover(dayIdx, startMins, endMins, clickClientX, clickClientY) {
+  async function postBlock(body) {
+    const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    try {
+      const resp = await fetch(BLOCK_CREATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+        body: JSON.stringify(body),
+      });
+      if (resp.ok) {
+        const html = await resp.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const script = doc.querySelector('script');
+        if (script) new Function(script.textContent)();
+      }
+    } catch(e) { console.error('Create block failed', e); }
+  }
+
+  function showCreatePopover(dayIdx, startMins, endMins, clickClientX, clickClientY, prefill) {
+    prefill = prefill || {};
     if (!BLOCK_CREATE_URL) {
       // No plan week exists for this week yet
       const tip = document.createElement('div');
@@ -354,16 +373,18 @@ const GRID = (() => {
     const topPx = Math.max(0, clickY - 10);
 
     pop.style.cssText = `position:absolute; top:${topPx}px; left:${leftPx}px; width:${popWidth}px; z-index:200;`;
+    const preCategoryPk = prefill.categoryPk != null ? String(prefill.categoryPk) : String(lastCategoryPk);
+    const preTitle = (prefill.title || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     pop.innerHTML = `
       <div style="background:#fff; border:1px solid #6366f1; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.12); padding:10px;">
         <div style="font-size:11px; color:#6366f1; font-weight:600; margin-bottom:6px;">${dayName} · ${startStr}–${endStr}</div>
-        <input id="create-popover-input" type="text" placeholder="Block title"
+        <input id="create-popover-input" type="text" placeholder="Block title" value="${preTitle}"
                style="display:block; width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 8px; font-size:13px; margin-bottom:6px; outline:none;">
         ${(typeof CATEGORIES !== 'undefined' && CATEGORIES.length) ? `
         <select id="create-popover-category"
                 style="display:block; width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 8px; font-size:13px; margin-bottom:6px; background:#fff; color:#374151;">
           <option value="">— no category —</option>
-          ${CATEGORIES.map(c => `<option value="${c.pk}" ${String(c.pk) === String(lastCategoryPk) ? 'selected' : ''}>${c.icon ? c.icon + ' ' : ''}${c.name}</option>`).join('')}
+          ${CATEGORIES.map(c => `<option value="${c.pk}" ${String(c.pk) === preCategoryPk ? 'selected' : ''}>${c.icon ? c.icon + ' ' : ''}${c.name}</option>`).join('')}
         </select>` : ''}
         <div style="display:flex; gap:6px;">
           <button id="create-popover-save"
@@ -398,23 +419,7 @@ const GRID = (() => {
         body.date = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
       }
 
-      const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-      try {
-        const resp = await fetch(BLOCK_CREATE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-          body: JSON.stringify(body),
-        });
-        if (resp.ok) {
-          // The response is a <script> that calls GRID.updateBlock(data) —
-          // the same path used by the edit-panel save. Execute it directly
-          // instead of reloading the whole page.
-          const html = await resp.text();
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          const script = doc.querySelector('script');
-          if (script) new Function(script.textContent)();
-        }
-      } catch(e) { console.error('Create block failed', e); }
+      await postBlock(body);
       removeCreatePopover();
     };
 
@@ -483,6 +488,44 @@ const GRID = (() => {
     });
 
     document.addEventListener('pointermove', e => {
+      if (suggestionDrag) {
+        const sd = suggestionDrag;
+        if (!sd.moved && (Math.abs(e.clientX - sd.startX) > 5 || Math.abs(e.clientY - sd.startY) > 5)) {
+          sd.moved = true;
+          sd.chip.style.opacity = '0.45';
+          sd.chip.style.cursor = 'grabbing';
+        }
+        if (!sd.moved) return;
+        e.preventDefault();
+        const dayIdx = colAtClientX(e.clientX);
+        if (dayIdx !== -1) {
+          const rect = gridEl.getBoundingClientRect();
+          const rawMins = START_HOUR * 60 + (e.clientY - rect.top) / SLOT_PX;
+          const startMins = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60 - sd.task.durationMins, snapToGrid(rawMins)));
+          const endMins = startMins + sd.task.durationMins;
+          const chipColor = sd.task.color.startsWith('#') ? sd.task.color : '#6366f1';
+          let ghost = document.getElementById('create-ghost');
+          if (!ghost) {
+            ghost = document.createElement('div');
+            ghost.id = 'create-ghost';
+            ghost.style.cssText = 'position:absolute;pointer-events:none;z-index:50;border-radius:6px;font-size:10px;padding:2px 5px;box-sizing:border-box;';
+            gridEl.appendChild(ghost);
+          }
+          ghost.style.background = colorWithOpacity(chipColor, 0.2);
+          ghost.style.border = `2px dashed ${chipColor}`;
+          ghost.style.color = chipColor;
+          ghost.style.left = (getColumnLeft(dayIdx) + 2) + 'px';
+          ghost.style.width = (getColumnWidth() - 4) + 'px';
+          ghost.style.top = topForTime(minsToTimeStr(startMins)) + 'px';
+          ghost.style.height = sd.task.durationMins * SLOT_PX + 'px';
+          ghost.textContent = `${minsToTimeStr(startMins)}–${minsToTimeStr(endMins)}`;
+        } else {
+          const ghost = document.getElementById('create-ghost');
+          if (ghost) ghost.remove();
+        }
+        return;
+      }
+
       if (!dragCreate) return;
       e.preventDefault(); // prevent page scroll while drawing
 
@@ -514,6 +557,54 @@ const GRID = (() => {
     }, { passive: false });
 
     document.addEventListener('pointerup', e => {
+      if (suggestionDrag) {
+        const sd = suggestionDrag;
+        suggestionDrag = null;
+        sd.chip.style.opacity = '';
+        sd.chip.style.cursor = '';
+        const ghost = document.getElementById('create-ghost');
+        if (ghost) ghost.remove();
+
+        if (sd.moved) {
+          // Drop: create block at the grid position
+          const dayIdx = colAtClientX(e.clientX);
+          if (dayIdx !== -1 && BLOCK_CREATE_URL) {
+            const rect = gridEl.getBoundingClientRect();
+            const rawMins = START_HOUR * 60 + (e.clientY - rect.top) / SLOT_PX;
+            const startMins = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60 - sd.task.durationMins, snapToGrid(rawMins)));
+            const body = {
+              title: sd.task.title,
+              start_time: minsToTimeStr(startMins),
+              end_time: minsToTimeStr(startMins + sd.task.durationMins),
+            };
+            if (sd.task.categoryPk) body.category = sd.task.categoryPk;
+            if (sd.task.pk) body.weekly_task = sd.task.pk;
+            if (sd.task.pluginSlug) body.plugin_slug = sd.task.pluginSlug;
+            if (sd.task.planSessionId) body.training_plan_session_id = sd.task.planSessionId;
+            if (!IS_TEMPLATE && WEEK_START_DATE) {
+              const [y, m, d] = WEEK_START_DATE.split('-').map(Number);
+              const dt = new Date(y, m - 1, d + dayIdx);
+              body.date = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+            } else if (IS_TEMPLATE) {
+              body.day_of_week = dayIdx;
+            }
+            postBlock(body);
+          }
+        } else {
+          // Tap/click on suggestion chip: open pre-filled popover anchored to Monday 09:00
+          if (BLOCK_CREATE_URL) {
+            const gridRect = gridEl.getBoundingClientRect();
+            const startMins = 9 * 60;
+            showCreatePopover(
+              0, startMins, startMins + sd.task.durationMins,
+              gridRect.left + 56 + 4, gridRect.top + topForTime('09:00'),
+              { title: sd.task.title, categoryPk: sd.task.categoryPk }
+            );
+          }
+        }
+        return;
+      }
+
       if (!dragCreate) return;
       const { dayIdx, startMins, endMins, moved } = dragCreate;
       dragCreate = null;
@@ -529,6 +620,30 @@ const GRID = (() => {
         const ghost = document.getElementById('create-ghost');
         if (ghost) ghost.remove();
       }
+    });
+  }
+
+  function initSuggestionDrag() {
+    document.querySelectorAll('.suggestion-chip').forEach(chip => {
+      chip.addEventListener('pointerdown', e => {
+        if (e.button !== 0 || isDragging) return;
+        e.stopPropagation();
+        suggestionDrag = {
+          task: {
+            pk: chip.dataset.pk || '',
+            title: chip.dataset.title || '',
+            durationMins: parseInt(chip.dataset.durationMins, 10) || 60,
+            color: chip.dataset.color || '#6366f1',
+            categoryPk: chip.dataset.categoryPk || '',
+            pluginSlug: chip.dataset.pluginSlug || '',
+            planSessionId: chip.dataset.planSessionId || '',
+          },
+          chip,
+          startX: e.clientX,
+          startY: e.clientY,
+          moved: false,
+        };
+      });
     });
   }
 
@@ -553,6 +668,7 @@ const GRID = (() => {
     }
 
     addGridClickHandler();
+    initSuggestionDrag();
 
     // Keep the sticky day-header in sync when the grid is scrolled horizontally
     const headerOuter = document.getElementById('week-header-outer');

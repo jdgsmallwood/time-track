@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import PlanBlock, TemplateBlock, TemplateWeek
+from .models import PlanBlock, TemplateBlock, TemplateWeek, WeeklyTask
 
 
 class TemplateWeekForm(forms.ModelForm):
@@ -24,13 +24,23 @@ class TemplateBlockForm(forms.ModelForm):
 class PlanBlockForm(forms.ModelForm):
     class Meta:
         model = PlanBlock
-        fields = ["date", "start_time", "end_time", "title", "category", "notes", "plugin_slug"]
+        fields = ["date", "start_time", "end_time", "title", "category", "weekly_task", "notes", "plugin_slug"]
         widgets = {
             "date": forms.DateInput(attrs={"type": "date"}),
             "start_time": forms.TimeInput(attrs={"type": "time"}),
             "end_time": forms.TimeInput(attrs={"type": "time"}),
             "notes": forms.Textarea(attrs={"rows": 3}),
             "plugin_slug": forms.HiddenInput(),
+            "weekly_task": forms.HiddenInput(),
+        }
+
+
+class WeeklyTaskForm(forms.ModelForm):
+    class Meta:
+        model = WeeklyTask
+        fields = ["title", "duration_minutes", "category", "recurrence_count", "notes"]
+        widgets = {
+            "notes": forms.TextInput(),
         }
 
 

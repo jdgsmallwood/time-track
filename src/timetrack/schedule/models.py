@@ -77,6 +77,35 @@ class PlanWeek(models.Model):
         return self.start_date + timedelta(days=6)
 
 
+class WeeklyTask(models.Model):
+    """A recurring task that should be scheduled every week."""
+    title = models.CharField(max_length=200)
+    duration_minutes = models.PositiveIntegerField(default=60)
+    category = models.ForeignKey(
+        Category, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="weekly_tasks",
+    )
+    recurrence_count = models.PositiveSmallIntegerField(
+        default=1, help_text="How many times per week this should appear."
+    )
+    notes = models.CharField(max_length=200, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["title"]
+
+    def __str__(self):
+        return self.title
+
+    @property
+    def color(self):
+        return self.category.color if self.category else "#6366f1"
+
+    @property
+    def icon(self):
+        return self.category.icon if self.category else ""
+
+
 class PlanBlock(models.Model):
     week = models.ForeignKey(PlanWeek, on_delete=models.CASCADE, related_name="blocks")
     date = models.DateField()
@@ -85,6 +114,10 @@ class PlanBlock(models.Model):
     title = models.CharField(max_length=200)
     category = models.ForeignKey(
         Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="plan_blocks"
+    )
+    weekly_task = models.ForeignKey(
+        WeeklyTask, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="scheduled_blocks",
     )
     notes = models.TextField(blank=True)
     plugin_slug = models.CharField(max_length=50, blank=True)

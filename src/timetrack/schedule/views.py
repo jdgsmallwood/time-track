@@ -9,8 +9,8 @@ from django.views import View
 
 from timetrack.plugins.registry import get_registry
 
-from .forms import CloneTemplateForm, PlanBlockForm, TemplateBlockForm, TemplateWeekForm
-from .models import PlanBlock, PlanWeek, TemplateBlock, TemplateWeek
+from .forms import CloneTemplateForm, PlanBlockForm, TemplateBlockForm, TemplateWeekForm, WeeklyTaskForm
+from .models import PlanBlock, PlanWeek, TemplateBlock, TemplateWeek, WeeklyTask
 from .services import clone_template_to_week, iso_week_monday, week_monday, week_stats
 
 
@@ -179,14 +179,17 @@ class PlanWeekView(View):
         )
         stats = week_stats(plan_week) if plan_week else {}
 
-        # Training plan banner
+        # Training plan banner + suggestions
         active_plan = None
         current_plan_week = None
         plan_estimated_minutes = None
+        plan_sessions = []
         strava_connected = False
         try:
-            from timetrack.plugins.running.models import TrainingPlan
+            from django.db.models import Count as _Count
+            from timetrack.plugins.running.models import RunSession as _RunSession, TrainingPlan
             from timetrack.plugins.running.services import (
+                estimate_session_minutes,
                 estimate_week_minutes,
                 get_current_plan_week,
             )
@@ -197,6 +200,34 @@ class PlanWeekView(View):
                     plan_estimated_minutes = estimate_week_minutes(
                         current_plan_week, active_plan
                     )
+                # Sessions for the VIEWED week (may differ from today's plan week)
+                if active_plan.start_date <= start:
+                    delta = (start - active_plan.start_date).days
+                    viewed_tplan_week = active_plan.weeks.filter(
+                        week_number=delta // 7 + 1
+                    ).first()
+                    if viewed_tplan_week:
+                        run_type_counts = {}
+                        if plan_week:
+                            for row in (
+                                _RunSession.objects
+                                .filter(plan_block__week=plan_week)
+                                .values("run_type")
+                                .annotate(n=_Count("id"))
+                            ):
+                                run_type_counts[row["run_type"]] = row["n"]
+                        for s in viewed_tplan_week.sessions.all():
+                            est = max(estimate_session_minutes(s, active_plan), 30)
+                            plan_sessions.append({
+                                "pk": s.pk,
+                                "run_type": s.run_type,
+                                "title": f"{s.get_run_type_display()} – {float(s.target_km):.1f} km",
+                                "estimated_minutes": est,
+                                "target_km": float(s.target_km),
+                                "day_of_week": s.day_of_week,
+                                "notes": s.notes,
+                                "scheduled_count": run_type_counts.get(s.run_type, 0),
+                            })
         except Exception:
             pass
         try:
@@ -204,6 +235,20 @@ class PlanWeekView(View):
             strava_connected = strava_is_connected()
         except Exception:
             pass
+
+        # Annotate each active WeeklyTask with how many blocks are scheduled this week.
+        from django.db.models import Count, Q
+        weekly_tasks = (
+            WeeklyTask.objects
+            .filter(is_active=True)
+            .select_related("category")
+            .annotate(
+                scheduled_count=Count(
+                    "scheduled_blocks",
+                    filter=Q(scheduled_blocks__week=plan_week) if plan_week else Q(pk__isnull=True),
+                )
+            )
+        )
 
         return render(
             request,
@@ -219,6 +264,8 @@ class PlanWeekView(View):
                 "plugins": registry.all(),
                 "block_form": PlanBlockForm(),
                 "categories": Category.objects.all(),
+                "weekly_tasks": weekly_tasks,
+                "plan_sessions": plan_sessions,
                 "day_names": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
                 "stats": stats,
                 "time_zone": settings.TIME_ZONE,
@@ -263,6 +310,22 @@ class PlanBlockCreateView(View):
             block = form.save(commit=False)
             block.week = week
             block.save()
+            # Auto-create RunSession when dragged from a running plan session chip
+            tps_id = data.get("training_plan_session_id")
+            if tps_id:
+                try:
+                    from timetrack.plugins.running.models import RunSession, TrainingPlanSession
+                    tps = TrainingPlanSession.objects.get(pk=int(tps_id))
+                    RunSession.objects.create(
+                        plan_block=block,
+                        run_type=tps.run_type,
+                        planned_km=tps.target_km,
+                    )
+                    if not block.plugin_slug:
+                        block.plugin_slug = "running"
+                        block.save(update_fields=["plugin_slug"])
+                except Exception:
+                    pass
             registry = get_registry()
             plugin = registry.get(block.plugin_slug) if block.plugin_slug else None
             return render(
@@ -438,6 +501,43 @@ def _blocks_to_grid(blocks, date_field: bool) -> list:
             d["day_of_week"] = b.day_of_week
         result.append(d)
     return result
+
+
+# ─── Weekly Tasks ────────────────────────────────────────────────────────────
+
+class WeeklyTaskListView(View):
+    def get(self, request):
+        tasks = WeeklyTask.objects.select_related("category").all()
+        form = WeeklyTaskForm()
+        from timetrack.core.models import Category
+        return render(request, "schedule/weekly_tasks.html", {
+            "tasks": tasks, "form": form, "categories": Category.objects.all(),
+        })
+
+    def post(self, request):
+        form = WeeklyTaskForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect("weekly-tasks")
+        tasks = WeeklyTask.objects.select_related("category").all()
+        from timetrack.core.models import Category
+        return render(request, "schedule/weekly_tasks.html", {
+            "tasks": tasks, "form": form, "categories": Category.objects.all(),
+        })
+
+
+class WeeklyTaskDeleteView(View):
+    def post(self, request, pk):
+        get_object_or_404(WeeklyTask, pk=pk).delete()
+        return redirect("weekly-tasks")
+
+
+class WeeklyTaskToggleView(View):
+    def post(self, request, pk):
+        task = get_object_or_404(WeeklyTask, pk=pk)
+        task.is_active = not task.is_active
+        task.save(update_fields=["is_active"])
+        return redirect("weekly-tasks")
 
 
 class PlanWeekHistoryView(View):

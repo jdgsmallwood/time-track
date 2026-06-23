@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}Weekly Tasks — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Weekly Tasks</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Recurring tasks that should be scheduled each week. Drag them onto the calendar from the week view.</p>
+    </div>
+    <a href="{% url 'week-current' %}" class="btn-indigo text-sm">This week →</a>
+  </div>
+
+  {# ── Task list ── #}
+  {% if tasks %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr class="text-left text-xs text-gray-500">
+          <th class="px-4 py-3 font-medium">Task</th>
+          <th class="px-4 py-3 font-medium">Duration</th>
+          <th class="px-4 py-3 font-medium">Category</th>
+          <th class="px-4 py-3 font-medium">Times / week</th>
+          <th class="px-4 py-3 font-medium">Active</th>
+          <th class="px-4 py-3 font-medium"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for task in tasks %}
+        <tr class="hover:bg-gray-50 {% if not task.is_active %}opacity-50{% endif %}">
+          <td class="px-4 py-3 font-medium">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                   style="background:{{ task.color }}"></div>
+              {{ task.title }}
+            </div>
+            {% if task.notes %}<div class="text-xs text-gray-400 mt-0.5 pl-4">{{ task.notes }}</div>{% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ task.duration_minutes }} min</td>
+          <td class="px-4 py-3 text-gray-600">
+            {% if task.category %}{{ task.category.icon }} {{ task.category.name }}{% else %}<span class="text-gray-400">—</span>{% endif %}
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ task.recurrence_count }}×</td>
+          <td class="px-4 py-3">
+            <form method="post" action="{% url 'weekly-task-toggle' task.pk %}" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="text-xs px-2 py-0.5 rounded-full font-medium
+                {% if task.is_active %}bg-emerald-100 text-emerald-700 hover:bg-emerald-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+                {% if task.is_active %}on{% else %}off{% endif %}
+              </button>
+            </form>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <form method="post" action="{% url 'weekly-task-delete' task.pk %}"
+                  onsubmit="return confirm('Delete \'{{ task.title }}\'?')">
+              {% csrf_token %}
+              <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 mb-6">
+    No weekly tasks yet. Add one below.
+  </div>
+  {% endif %}
+
+  {# ── Add form ── #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Add a new weekly task</h2>
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-2 mb-4 text-sm text-red-700">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+      <div class="grid grid-cols-2 gap-4">
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Title</label>
+          {{ form.title }}
+          {% if form.title.errors %}<p class="text-xs text-red-600 mt-1">{{ form.title.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Duration (minutes)</label>
+          {{ form.duration_minutes }}
+          {% if form.duration_minutes.errors %}<p class="text-xs text-red-600 mt-1">{{ form.duration_minutes.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Times per week</label>
+          {{ form.recurrence_count }}
+          {% if form.recurrence_count.errors %}<p class="text-xs text-red-600 mt-1">{{ form.recurrence_count.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Category (optional)</label>
+          {{ form.category }}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Notes (optional)</label>
+          {{ form.notes }}
+        </div>
+      </div>
+      <div class="mt-4">
+        <button type="submit" class="btn-indigo text-sm">Add task</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<style>
+  input[type=text], input[type=number], select, textarea {
+    display: block; width: 100%; border: 1px solid #e5e7eb; border-radius: .5rem;
+    padding: .375rem .625rem; font-size: .875rem; color: #111827;
+    background: #fff; outline: none;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff;
+  }
+</style>
+{% endblock %}
