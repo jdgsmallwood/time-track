@@ -413,6 +413,18 @@ class PlanBlockUpdateView(View):
         return HttpResponse(status=204)
 
 
+# ─── Stats partial ───────────────────────────────────────────────────────────
+
+class PlanWeekStatsView(View):
+    def get(self, request, week_pk):
+        week = get_object_or_404(PlanWeek, pk=week_pk)
+        return render(
+            request,
+            "schedule/partials/week_stats.html",
+            {"stats": week_stats(week)},
+        )
+
+
 # ─── Google Calendar push (delegated to gcal app) ────────────────────────────
 
 class PushToGCalView(View):

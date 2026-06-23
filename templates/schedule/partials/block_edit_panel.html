@@ -10,7 +10,11 @@
 <form hx-post="{{ action_url }}"
       hx-target="#edit-panel-content"
       hx-swap="innerHTML"
-      {% if is_template %}hx-on::after-request="if(event.detail.successful) window.location.reload()"{% endif %}
+      {% if is_template %}
+      hx-on::after-request="if(event.detail.successful) window.location.reload()"
+      {% else %}
+      hx-on::after-request="if(event.detail.successful && document.getElementById('week-stats-panel')) htmx.ajax('GET', '/schedule/plan-weeks/{{ block.week.pk }}/stats/', {target:'#week-stats-panel', swap:'innerHTML'})"
+      {% endif %}
       class="space-y-3">
   {% csrf_token %}
 
