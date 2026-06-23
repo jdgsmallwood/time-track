@@ -1,6 +1,7 @@
 services:
   app:
     build: .
+    container_name: timetrack-app
     ports:
       - "8000:8000"
     volumes:
