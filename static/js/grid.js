@@ -170,9 +170,11 @@ const GRID = (() => {
             if (IS_TEMPLATE) {
               patchBlock(block, { day_of_week: newDay, start_time: newStart, end_time: newEnd });
             } else {
-              const weekStart = new Date(WEEK_START_DATE + 'T00:00:00');
-              const newDate = new Date(weekStart.getTime() + newDay * 86400000);
-              const newDateStr = newDate.toISOString().slice(0, 10);
+              // Use local-date constructor (not toISOString which converts to UTC
+              // and can give the wrong day in non-UTC timezones like UTC+10).
+              const [y, m, d] = WEEK_START_DATE.split('-').map(Number);
+              const dt = new Date(y, m - 1, d + newDay);
+              const newDateStr = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
               block.date = newDateStr;
               patchBlock(block, { date: newDateStr, start_time: newStart, end_time: newEnd });
             }
@@ -275,6 +277,7 @@ const GRID = (() => {
   // Set to true by showCreatePopover so the document outside-click handler
   // ignores the very click that opened the popover (which also bubbles to document).
   let suppressNextOutsideClose = false;
+  let lastCategoryPk = ''; // remember last-used category between popover opens
 
   function removeCreatePopover() {
     const el = document.getElementById('create-popover');
@@ -305,7 +308,7 @@ const GRID = (() => {
 
     // Position at the click point, nudged right; flip left if it would overflow
     const gridRect = gridEl.getBoundingClientRect();
-    const popWidth = 210;
+    const popWidth = 230;
     const clickX = clickClientX - gridRect.left;
     const clickY = clickClientY - gridRect.top;
     let leftPx = clickX + 8;
@@ -319,7 +322,13 @@ const GRID = (() => {
       <div style="background:#fff; border:1px solid #6366f1; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.12); padding:10px;">
         <div style="font-size:11px; color:#6366f1; font-weight:600; margin-bottom:6px;">${dayName} · ${startStr}–${endStr}</div>
         <input id="create-popover-input" type="text" placeholder="Block title"
-               style="display:block; width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 8px; font-size:13px; margin-bottom:7px; outline:none;">
+               style="display:block; width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 8px; font-size:13px; margin-bottom:6px; outline:none;">
+        ${(typeof CATEGORIES !== 'undefined' && CATEGORIES.length) ? `
+        <select id="create-popover-category"
+                style="display:block; width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 8px; font-size:13px; margin-bottom:6px; background:#fff; color:#374151;">
+          <option value="">— no category —</option>
+          ${CATEGORIES.map(c => `<option value="${c.pk}" ${String(c.pk) === String(lastCategoryPk) ? 'selected' : ''}>${c.icon ? c.icon + ' ' : ''}${c.name}</option>`).join('')}
+        </select>` : ''}
         <div style="display:flex; gap:6px;">
           <button id="create-popover-save"
                   style="flex:1; background:#6366f1; color:#fff; border:none; border-radius:6px; padding:5px 0; font-size:12px; font-weight:600; cursor:pointer;">
@@ -340,7 +349,11 @@ const GRID = (() => {
       const title = input.value.trim();
       if (!title) { input.style.borderColor = '#f87171'; input.focus(); return; }
 
+      const catEl = pop.querySelector('#create-popover-category');
+      if (catEl && catEl.value) lastCategoryPk = catEl.value;
+
       const body = { title, start_time: startStr, end_time: endStr };
+      if (catEl && catEl.value) body.category = catEl.value;
       if (IS_TEMPLATE) {
         body.day_of_week = dayIdx;
       } else {

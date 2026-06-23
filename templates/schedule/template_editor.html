@@ -97,6 +97,7 @@
 {% block extra_js %}
 <script>
 const GRID_DATA = {{ grid_data|safe }};
+const CATEGORIES = [{% for cat in categories %}{"pk":{{ cat.pk }},"name":"{{ cat.name|escapejs }}","color":"{{ cat.color }}","icon":"{{ cat.icon|default:''|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
 const IS_TEMPLATE = true;
 const OWNER_PK = {{ template.pk }};
 const BLOCK_CREATE_URL = '/schedule/templates/{{ template.pk }}/blocks/';
