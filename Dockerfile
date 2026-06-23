@@ -65,7 +65,7 @@ RUN DATABASE_URL="sqlite:///tmp/build.db" SECRET_KEY="build-only" \
 COPY docker-entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
-RUN chown -R app:app /app
+RUN mkdir -p /app/db && chown -R app:app /app
 USER app
 
 EXPOSE 8000
