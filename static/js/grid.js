@@ -185,20 +185,24 @@ const GRID = (() => {
         edges: { bottom: true },
         modifiers: [
           interact.modifiers.snapSize({
-            targets: [{ height: SNAP_MINUTES * SLOT_PX }],
+            // Function target: snap height to the nearest multiple of the slot step.
+            // A static { height: N } target snaps to exactly N px (not multiples),
+            // which collapses every resize attempt to a fixed size.
+            targets: [
+              (_w, h) => ({ height: Math.round(h / (SNAP_MINUTES * SLOT_PX)) * (SNAP_MINUTES * SLOT_PX) }),
+            ],
           }),
         ],
         listeners: {
           move(event) {
-            const { height } = event.rect;
-            el.style.height = `${height}px`;
+            el.style.height = `${event.rect.height}px`;
           },
           end(event) {
-            const newHeight = event.rect.height;
-            const durationMins = snapToGrid(newHeight / SLOT_PX);
+            const durationMins = snapToGrid(event.rect.height / SLOT_PX);
             const startMins = minutesSinceMidnight(block.start_time);
             const newEnd = minsToTimeStr(Math.min(END_HOUR * 60, startMins + Math.max(15, durationMins)));
             block.end_time = newEnd;
+            el.style.height = `${durationMins * SLOT_PX}px`;
             patchBlock(block, { end_time: newEnd });
           },
         },
