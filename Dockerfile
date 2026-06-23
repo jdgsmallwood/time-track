@@ -39,7 +39,8 @@ FROM python:3.12-slim AS runtime
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=timetrack.settings
+    DJANGO_SETTINGS_MODULE=timetrack.settings \
+    PYTHONPATH=/app/src
 
 WORKDIR /app
 
