@@ -4,7 +4,7 @@
 <div class="max-w-5xl mx-auto px-4 py-6 space-y-6">
 
   <div class="flex items-center justify-between">
-    <div>
+    <div x-data="{ editDate: false }">
       <div class="flex items-center gap-3 mb-1">
         <h1 class="text-2xl font-bold text-gray-900">{{ plan.name }}</h1>
         {% if plan.is_active %}
@@ -12,9 +12,19 @@
         {% endif %}
       </div>
       <p class="text-sm text-gray-500">
-        {{ plan.total_weeks }} weeks · starts {{ plan.start_date|date:"j M Y" }}
+        {{ plan.total_weeks }} weeks · starts
+        <button @click="editDate = true" class="font-medium text-gray-700 hover:text-indigo-600 transition-colors">
+          {{ plan.start_date|date:"j M Y" }}
+        </button>
         {% if plan.description %} · {{ plan.description }}{% endif %}
       </p>
+      <form x-show="editDate" x-cloak method="post" action="{% url 'training-plan-detail' pk=plan.pk %}"
+            class="mt-2 flex items-center gap-2 flex-wrap">
+        {% csrf_token %}
+        <input type="date" name="start_date" value="{{ plan.start_date|date:'Y-m-d' }}" class="form-input text-sm">
+        <button type="submit" class="btn-indigo text-sm">Save</button>
+        <button type="button" @click="editDate = false" class="text-sm text-gray-500">Cancel</button>
+      </form>
     </div>
     <div class="flex gap-2">
       {% if not plan.is_active %}

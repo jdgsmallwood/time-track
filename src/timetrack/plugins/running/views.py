@@ -40,6 +40,14 @@ class TrainingPlanDetailView(View):
             {"plan": plan, "week_data": week_data, "pace_zones": pace_zones},
         )
 
+    def post(self, request, pk):
+        plan = get_object_or_404(TrainingPlan, pk=pk)
+        start_date = request.POST.get("start_date")
+        if start_date:
+            plan.start_date = start_date
+            plan.save(update_fields=["start_date"])
+        return redirect("training-plan-detail", pk=pk)
+
     def delete(self, request, pk):
         TrainingPlan.objects.filter(pk=pk).delete()
         return redirect("training-plan-list")

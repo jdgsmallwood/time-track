@@ -321,6 +321,22 @@ const GRID = (() => {
     if (el) el.remove();
   }
 
+  function updateSuggestionChip(selector) {
+    const chip = document.querySelector('.suggestion-chip' + selector);
+    if (!chip) return;
+    const span = chip.querySelector('span');
+    if (!span) return;
+    const m = span.textContent.trim().match(/^(\d+)\/(\d+)$/);
+    if (!m) return;
+    const next = parseInt(m[1], 10) + 1;
+    const total = parseInt(m[2], 10);
+    span.textContent = next + '/' + total;
+    if (next >= total) {
+      span.className = 'text-emerald-600 font-medium';
+      chip.classList.add('opacity-50');
+    }
+  }
+
   async function postBlock(body) {
     const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
     try {
@@ -334,6 +350,8 @@ const GRID = (() => {
         const doc = new DOMParser().parseFromString(html, 'text/html');
         const script = doc.querySelector('script');
         if (script) new Function(script.textContent)();
+        if (body.weekly_task) updateSuggestionChip(`[data-pk="${body.weekly_task}"]`);
+        else if (body.training_plan_session_id) updateSuggestionChip(`[data-plan-session-id="${body.training_plan_session_id}"]`);
       }
     } catch(e) { console.error('Create block failed', e); }
   }
@@ -411,6 +429,8 @@ const GRID = (() => {
 
       const body = { title, start_time: startStr, end_time: endStr };
       if (catEl && catEl.value) body.category = catEl.value;
+      if (prefill.weeklyTaskPk) body.weekly_task = prefill.weeklyTaskPk;
+      if (prefill.planSessionId) body.training_plan_session_id = prefill.planSessionId;
       if (IS_TEMPLATE) {
         body.day_of_week = dayIdx;
       } else {
@@ -598,7 +618,8 @@ const GRID = (() => {
             showCreatePopover(
               0, startMins, startMins + sd.task.durationMins,
               gridRect.left + 56 + 4, gridRect.top + topForTime('09:00'),
-              { title: sd.task.title, categoryPk: sd.task.categoryPk }
+              { title: sd.task.title, categoryPk: sd.task.categoryPk,
+                weeklyTaskPk: sd.task.pk, planSessionId: sd.task.planSessionId }
             );
           }
         }

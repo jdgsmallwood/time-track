@@ -119,7 +119,10 @@ class TemplateBlockUpdateView(View):
             if plugin:
                 plugin_form = plugin.get_template_form(block, data)
                 if plugin_form and plugin_form.is_valid():
-                    plugin_form.save()
+                    session = plugin_form.save(commit=False)
+                    if session.pk is None:
+                        session.template_block = block
+                    session.save()
             return render(
                 request,
                 "schedule/partials/block_chip.html",
@@ -365,7 +368,10 @@ class PlanBlockUpdateView(View):
             if plugin:
                 plugin_form = plugin.get_plan_form(block, data)
                 if plugin_form and plugin_form.is_valid():
-                    plugin_form.save()
+                    session = plugin_form.save(commit=False)
+                    if session.pk is None:
+                        session.plan_block = block
+                    session.save()
             # mark week as draft again after edit
             block.week.status = "draft"
             block.week.save(update_fields=["status"])
