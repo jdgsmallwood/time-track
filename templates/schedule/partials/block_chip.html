@@ -1,22 +1,17 @@
-{# Partial returned after block create/update — triggers grid re-render via JS event #}
-<div id="block-update-{{ block.pk }}"
-     hx-swap-oob="true"
-     data-block-update="{{ block.pk }}"
-     data-block='{"id": {{ block.pk }}, "title": "{{ block.title|escapejs }}", "start_time": "{{ block.start_time|time:"H:i" }}", "end_time": "{{ block.end_time|time:"H:i" }}", "category_color": "{{ block.category.color|default:"#6366f1" }}", "category_name": "{{ block.category.name|default:""|escapejs }}", "plugin_slug": "{{ block.plugin_slug }}", "day_of_week": {% if is_template %}{{ block.day_of_week }}{% else %}{{ block.date.weekday }}{% endif %}}'>
-</div>
 <script>
 (function() {
-  const el = document.querySelector('[data-block-update="{{ block.pk }}"]');
-  if (!el) return;
-  const data = JSON.parse(el.dataset.block);
-  if (typeof GRID !== 'undefined') {
-    const idx = GRID_DATA.findIndex(b => b.id === data.id);
-    if (idx >= 0) GRID_DATA[idx] = data; else GRID_DATA.push(data);
-    // Re-render this block
-    const blockEl = document.getElementById('block-' + data.id);
-    if (blockEl) blockEl.remove();
-    requestAnimationFrame(() => GRID.renderBlock(data));
-  }
-  document.getElementById('edit-panel').classList.add('hidden');
+  var data = {
+    "id": {{ block.pk }},
+    "title": "{{ block.title|escapejs }}",
+    "start_time": "{{ block.start_time|time:'H:i' }}",
+    "end_time": "{{ block.end_time|time:'H:i' }}",
+    "category_color": "{{ block.category.color|default:'#6366f1' }}",
+    "category_name": "{{ block.category.name|default:''|escapejs }}",
+    "plugin_slug": "{{ block.plugin_slug }}",
+    "day_of_week": {% if is_template %}{{ block.day_of_week }}{% else %}{{ block.date.weekday }}{% endif %}
+  };
+  if (typeof GRID !== 'undefined' && GRID.updateBlock) GRID.updateBlock(data);
+  var panel = document.getElementById('edit-panel');
+  if (panel) panel.classList.add('hidden');
 })();
 </script>

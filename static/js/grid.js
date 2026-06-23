@@ -389,7 +389,9 @@ const GRID = (() => {
       if (pop && !pop.contains(e.target)) removeCreatePopover();
     });
 
-    // ── Drag-to-create (pointer events for cross-browser reliability) ─────────
+    // ── Drag-to-create ────────────────────────────────────────────────────────
+    // pointerdown on the grid starts tracking; document-level pointermove/pointerup
+    // handle the rest so we don't depend on setPointerCapture (Firefox can cancel it).
 
     gridEl.addEventListener('pointerdown', e => {
       if (e.button !== 0 || isDragging) return;
@@ -407,12 +409,13 @@ const GRID = (() => {
       const startMins = Math.max(START_HOUR * 60, Math.min(END_HOUR * 60 - SNAP_MINUTES, snapToGrid(rawMins)));
 
       dragCreate = { dayIdx, startMins, endMins: startMins + 60, moved: false };
-      gridEl.setPointerCapture(e.pointerId); // receive move/up even outside the element
-      e.preventDefault();
+      // Don't call setPointerCapture here — Firefox can cancel it causing missed events.
+      // Don't call preventDefault here — it cancels pointer capture in some Firefox builds.
     });
 
-    gridEl.addEventListener('pointermove', e => {
+    document.addEventListener('pointermove', e => {
       if (!dragCreate) return;
+      e.preventDefault(); // prevent page scroll while drawing
 
       const rect = gridEl.getBoundingClientRect();
       const rawMins = START_HOUR * 60 + (e.clientY - rect.top) / SLOT_PX;
@@ -439,9 +442,9 @@ const GRID = (() => {
       ghost.style.top    = topForTime(minsToTimeStr(dragCreate.startMins)) + 'px';
       ghost.style.height = (endMins - dragCreate.startMins) * SLOT_PX + 'px';
       ghost.textContent  = `${minsToTimeStr(dragCreate.startMins)}–${minsToTimeStr(endMins)}`;
-    });
+    }, { passive: false });
 
-    gridEl.addEventListener('pointerup', e => {
+    document.addEventListener('pointerup', e => {
       if (!dragCreate) return;
       const { dayIdx, startMins, endMins, moved } = dragCreate;
       dragCreate = null;
@@ -483,7 +486,13 @@ const GRID = (() => {
     addGridClickHandler();
   }
 
-  return { init, repositionAll };
+  function updateBlock(blockData) {
+    const idx = GRID_DATA.findIndex(b => b.id === blockData.id);
+    if (idx >= 0) GRID_DATA[idx] = blockData; else GRID_DATA.push(blockData);
+    requestAnimationFrame(() => renderBlock(blockData));
+  }
+
+  return { init, repositionAll, updateBlock };
 })();
 
 document.addEventListener('DOMContentLoaded', () => GRID.init());
