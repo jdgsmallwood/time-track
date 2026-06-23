@@ -103,5 +103,5 @@ const BLOCK_CREATE_URL = '/schedule/templates/{{ template.pk }}/blocks/';
 const BLOCK_UPDATE_URL_TPL = '/schedule/template-blocks/';
 const WEEK_START_DATE = '';
 </script>
-<script src="/static/js/grid.js" defer></script>
+{% load static %}<script src="{% static 'js/grid.js' %}" defer></script>
 {% endblock %}

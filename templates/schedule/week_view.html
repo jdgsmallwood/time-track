@@ -354,5 +354,5 @@ const WEEK_START_DATE = '';
 {% endif %}
 const BLOCK_UPDATE_URL_TPL = '/schedule/plan-blocks/';
 </script>
-<script src="/static/js/grid.js" defer></script>
+{% load static %}<script src="{% static 'js/grid.js' %}" defer></script>
 {% endblock %}
