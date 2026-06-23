@@ -22,6 +22,7 @@ dependencies = [
 dev = [
     "pytest>=8.0",
     "pytest-django>=4.8",
+    "pytest-playwright>=0.5",
     "factory-boy>=3.3",
     "coverage[toml]>=7.5",
 ]
@@ -63,7 +64,7 @@ fix = "ruff check --fix . && ruff format ."
 DJANGO_SETTINGS_MODULE = "timetrack.settings"
 pythonpath = ["src"]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --ignore=tests/e2e"
 
 [tool.coverage.run]
 source = ["src/timetrack"]
