@@ -103,15 +103,14 @@ class CategoryListView(View):
 
 class CategoryUpdateView(View):
     def post(self, request, pk):
+        from django.shortcuts import redirect
         from .forms import CategoryForm
 
         cat = Category.objects.get(pk=pk)
         form = CategoryForm(request.POST, instance=cat)
         if form.is_valid():
             form.save()
-        return render(
-            request, "core/categories.html", {"categories": Category.objects.all()}
-        )
+        return redirect("/settings/categories/")
 
     def delete(self, request, pk):
         Category.objects.filter(pk=pk).delete()
