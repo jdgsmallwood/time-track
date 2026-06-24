@@ -36,3 +36,11 @@ class TimeTrackPlugin:
     def gcal_description(self, plan_block) -> str:
         """Return extra text to append to the Google Calendar event description."""
         return ""
+
+    def get_suggestions(self, plan_week) -> list:
+        """Return draggable suggestion chips for the week view 'To Schedule' panel.
+
+        Each dict must include: title, duration_minutes, color, scheduled_count,
+        recurrence_count, plugin_slug, and practice_goal_id (or similar ID key).
+        """
+        return []

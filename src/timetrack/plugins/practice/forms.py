@@ -1,6 +1,12 @@
 from django import forms
 
-from .models import PracticeSession
+from .models import PracticeGoal, PracticeSession
+
+
+class PracticeGoalForm(forms.ModelForm):
+    class Meta:
+        model = PracticeGoal
+        fields = ["instrument", "focus", "duration_minutes", "recurrence_count", "notes", "is_active"]
 
 
 class PracticeSessionForm(forms.ModelForm):

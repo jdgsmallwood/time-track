@@ -9,6 +9,7 @@ urlpatterns = [
     path("gcal/", include("timetrack.gcal.urls")),
     path("schedule/", include("timetrack.schedule.urls")),
     path("running/", include("timetrack.plugins.running.urls")),
+    path("practice/", include("timetrack.plugins.practice.urls")),
     path("strava/", include("timetrack.strava.urls")),
     path("healthz", healthz, name="healthz"),
     path("", include("timetrack.core.urls")),

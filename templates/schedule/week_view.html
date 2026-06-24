@@ -321,7 +321,8 @@
                data-duration-mins="{{ session.estimated_minutes }}"
                data-color="#22c55e"
                data-category-pk=""
-               data-plugin-slug="running">
+               data-plugin-slug="running"
+               data-practice-goal-id="">
             <div class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style="background:#22c55e"></div>
             <div class="flex-1 min-w-0">
               <div class="text-xs font-semibold text-gray-700 truncate leading-tight">{{ session.title }}</div>
@@ -329,6 +330,42 @@
                 {{ session.estimated_minutes }}m ·
                 <span class="{% if session.scheduled_count >= 1 %}text-emerald-600 font-medium{% endif %}">
                   {{ session.scheduled_count }}/1
+                </span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {# Plugin-provided suggestions (e.g. practice goals) #}
+        {% if plugin_suggestions %}
+        <div class="border-t border-gray-100 mt-1 pt-1">
+          <div class="flex items-center justify-between px-2 py-1">
+            <span class="text-xs font-medium text-gray-400 uppercase tracking-wide">Practice</span>
+            <a href="{% url 'practice-goals' %}" class="text-xs text-indigo-600 hover:text-indigo-800">Manage</a>
+          </div>
+          {% for sugg in plugin_suggestions %}
+          <div class="suggestion-chip flex items-center gap-2 p-2 rounded-lg cursor-grab
+                      hover:bg-gray-50 transition-colors select-none group mb-0.5
+                      {% if sugg.scheduled_count >= sugg.recurrence_count %}opacity-50{% endif %}"
+               draggable="false"
+               data-pk=""
+               data-plan-session-id=""
+               data-practice-goal-id="{{ sugg.practice_goal_id }}"
+               data-title="{{ sugg.title|escapejs }}"
+               data-duration-mins="{{ sugg.duration_minutes }}"
+               data-color="{{ sugg.color }}"
+               data-category-pk=""
+               data-plugin-slug="{{ sugg.plugin_slug }}">
+            <div class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
+                 style="background:{{ sugg.color }}"></div>
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-semibold text-gray-700 truncate leading-tight">{{ sugg.title }}</div>
+              <div class="text-xs text-gray-400 leading-tight">
+                {{ sugg.duration_minutes }}m ·
+                <span class="{% if sugg.scheduled_count >= sugg.recurrence_count %}text-emerald-600 font-medium{% endif %}">
+                  {{ sugg.scheduled_count }}/{{ sugg.recurrence_count }}
                 </span>
               </div>
             </div>

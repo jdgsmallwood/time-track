@@ -13,10 +13,15 @@
       {% if is_template %}
       hx-on::after-request="if(event.detail.successful) window.location.reload()"
       {% else %}
-      hx-on::after-request="if(event.detail.successful && document.getElementById('week-stats-panel')) htmx.ajax('GET', '/schedule/plan-weeks/{{ block.week.pk }}/stats/', {target:'#week-stats-panel', swap:'innerHTML'})"
+      hx-on::after-request="if(event.detail.successful) { var sp=document.getElementById('week-stats-panel'); if(sp) htmx.ajax('GET', '/schedule/plan-weeks/{{ block.week.pk }}/stats/', {target:'#week-stats-panel', swap:'innerHTML'}); }"
       {% endif %}
       class="space-y-3">
   {% csrf_token %}
+  {# Preserve plugin_slug and weekly_task — both are hidden in PlanBlockForm but must be submitted explicitly #}
+  <input type="hidden" name="plugin_slug" value="{{ block.plugin_slug }}">
+  {% if not is_template %}
+  <input type="hidden" name="weekly_task" value="{{ block.weekly_task_id|default:'' }}">
+  {% endif %}
 
   <div>
     <label class="block text-xs font-medium text-gray-600 mb-1">Title</label>

@@ -17,6 +17,7 @@ class PracticePlugin(TimeTrackPlugin):
             return
         PracticeSession.objects.create(
             plan_block=plan_block,
+            goal=src.goal,
             instrument=src.instrument,
             focus=src.focus,
             pieces=src.pieces,
@@ -29,6 +30,7 @@ class PracticePlugin(TimeTrackPlugin):
             return
         PracticeSession.objects.create(
             plan_block=dest_plan_block,
+            goal=src.goal,
             instrument=src.instrument,
             focus=src.focus,
             pieces=src.pieces,
@@ -63,6 +65,34 @@ class PracticePlugin(TimeTrackPlugin):
         if session.pieces:
             parts.append(session.pieces)
         return " · ".join(parts)
+
+    def get_suggestions(self, plan_week) -> list:
+        from django.db.models import Count, Q
+        from .models import PracticeGoal
+
+        goals = (
+            PracticeGoal.objects
+            .filter(is_active=True)
+            .annotate(
+                scheduled_count=Count(
+                    "sessions",
+                    filter=Q(sessions__plan_block__week=plan_week) if plan_week else Q(pk__isnull=True),
+                )
+            )
+        )
+        return [
+            {
+                "pk": g.pk,
+                "title": g.title,
+                "duration_minutes": g.duration_minutes,
+                "color": g.color,
+                "scheduled_count": g.scheduled_count,
+                "recurrence_count": g.recurrence_count,
+                "plugin_slug": self.slug,
+                "practice_goal_id": g.pk,
+            }
+            for g in goals
+        ]
 
     def _get_session(self, block):
         try:

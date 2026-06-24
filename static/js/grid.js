@@ -74,7 +74,7 @@ const GRID = (() => {
 
     const el = document.createElement('div');
     el.id = 'block-' + block.id;
-    el.className = 'absolute rounded-lg px-2 py-1 cursor-pointer shadow-sm border border-white/40 select-none overflow-hidden transition-shadow hover:shadow-md block-chip';
+    el.className = 'absolute rounded-lg cursor-pointer shadow-sm border border-white/40 select-none overflow-hidden transition-shadow hover:shadow-md block-chip';
     el.dataset.blockId = block.id;
 
     const color = block.category_color || '#6366f1';
@@ -88,12 +88,7 @@ const GRID = (() => {
       color: #fff;
     `;
 
-    const dur = minutesSinceMidnight(block.end_time) - minutesSinceMidnight(block.start_time);
-    el.innerHTML = `
-      <div class="font-semibold text-xs leading-tight truncate">${block.title}</div>
-      ${dur > 30 ? `<div class="text-xs opacity-80">${block.start_time}–${block.end_time}</div>` : ''}
-      ${block.plugin_slug ? `<div class="text-xs opacity-70">${block.plugin_slug}</div>` : ''}
-    `;
+    el.innerHTML = blockInnerHTML(block);
 
     el.addEventListener('click', (e) => {
       if (isDragging) return; // drag-end fires click in some browsers; ignore it
@@ -182,7 +177,7 @@ const GRID = (() => {
         },
       })
       .resizable({
-        edges: { top: true, bottom: true },
+        edges: { top: '.block-resize-top', bottom: '.block-resize-bot' },
         modifiers: [
           interact.modifiers.snapSize({
             targets: [
@@ -231,13 +226,21 @@ const GRID = (() => {
       });
   }
 
-  function refreshBlockContent(el, block) {
+  function blockInnerHTML(block) {
     const dur = minutesSinceMidnight(block.end_time) - minutesSinceMidnight(block.start_time);
-    el.innerHTML = `
-      <div class="font-semibold text-xs leading-tight truncate">${block.title}</div>
-      ${dur > 30 ? `<div class="text-xs opacity-80">${block.start_time}–${block.end_time}</div>` : ''}
-      ${block.plugin_slug ? `<div class="text-xs opacity-70">${block.plugin_slug}</div>` : ''}
+    return `
+      <div class="block-resize-top" style="position:absolute;inset-x:0;top:0;height:8px;cursor:ns-resize;z-index:1"></div>
+      <div style="padding:2px 6px 2px 6px;pointer-events:none">
+        <div class="font-semibold text-xs leading-tight truncate">${block.title}</div>
+        ${dur > 30 ? `<div class="text-xs opacity-80">${block.start_time}–${block.end_time}</div>` : ''}
+        ${block.plugin_slug ? `<div class="text-xs opacity-70">${block.plugin_slug}</div>` : ''}
+      </div>
+      <div class="block-resize-bot" style="position:absolute;inset-x:0;bottom:0;height:8px;cursor:ns-resize;z-index:1"></div>
     `;
+  }
+
+  function refreshBlockContent(el, block) {
+    el.innerHTML = blockInnerHTML(block);
   }
 
   function updateBlockPosition(block) {
@@ -262,6 +265,7 @@ const GRID = (() => {
         },
         body: JSON.stringify(fields),
       });
+      refreshStats();
     } catch (e) {
       console.error('Failed to update block:', e);
     }
@@ -337,6 +341,13 @@ const GRID = (() => {
     }
   }
 
+  function refreshStats() {
+    const panel = document.getElementById('week-stats-panel');
+    if (panel && typeof OWNER_PK !== 'undefined' && OWNER_PK && !IS_TEMPLATE) {
+      htmx.ajax('GET', `/schedule/plan-weeks/${OWNER_PK}/stats/`, {target: '#week-stats-panel', swap: 'innerHTML'});
+    }
+  }
+
   async function postBlock(body) {
     const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
     try {
@@ -352,6 +363,8 @@ const GRID = (() => {
         if (script) new Function(script.textContent)();
         if (body.weekly_task) updateSuggestionChip(`[data-pk="${body.weekly_task}"]`);
         else if (body.training_plan_session_id) updateSuggestionChip(`[data-plan-session-id="${body.training_plan_session_id}"]`);
+        else if (body.practice_goal_id) updateSuggestionChip(`[data-practice-goal-id="${body.practice_goal_id}"]`);
+        refreshStats();
       }
     } catch(e) { console.error('Create block failed', e); }
   }
@@ -431,6 +444,7 @@ const GRID = (() => {
       if (catEl && catEl.value) body.category = catEl.value;
       if (prefill.weeklyTaskPk) body.weekly_task = prefill.weeklyTaskPk;
       if (prefill.planSessionId) body.training_plan_session_id = prefill.planSessionId;
+      if (prefill.practiceGoalId) body.practice_goal_id = prefill.practiceGoalId;
       if (IS_TEMPLATE) {
         body.day_of_week = dayIdx;
       } else {
@@ -601,6 +615,7 @@ const GRID = (() => {
             if (sd.task.pk) body.weekly_task = sd.task.pk;
             if (sd.task.pluginSlug) body.plugin_slug = sd.task.pluginSlug;
             if (sd.task.planSessionId) body.training_plan_session_id = sd.task.planSessionId;
+            if (sd.task.practiceGoalId) body.practice_goal_id = sd.task.practiceGoalId;
             if (!IS_TEMPLATE && WEEK_START_DATE) {
               const [y, m, d] = WEEK_START_DATE.split('-').map(Number);
               const dt = new Date(y, m - 1, d + dayIdx);
@@ -619,7 +634,8 @@ const GRID = (() => {
               0, startMins, startMins + sd.task.durationMins,
               gridRect.left + 56 + 4, gridRect.top + topForTime('09:00'),
               { title: sd.task.title, categoryPk: sd.task.categoryPk,
-                weeklyTaskPk: sd.task.pk, planSessionId: sd.task.planSessionId }
+                weeklyTaskPk: sd.task.pk, planSessionId: sd.task.planSessionId,
+                practiceGoalId: sd.task.practiceGoalId }
             );
           }
         }
@@ -658,6 +674,7 @@ const GRID = (() => {
             categoryPk: chip.dataset.categoryPk || '',
             pluginSlug: chip.dataset.pluginSlug || '',
             planSessionId: chip.dataset.planSessionId || '',
+            practiceGoalId: chip.dataset.practiceGoalId || '',
           },
           chip,
           startX: e.clientX,

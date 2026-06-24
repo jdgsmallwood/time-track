@@ -253,6 +253,11 @@ class PlanWeekView(View):
             )
         )
 
+        # Collect plugin-provided suggestion chips (e.g. practice goals).
+        plugin_suggestions = []
+        for _plugin in registry.all():
+            plugin_suggestions.extend(_plugin.get_suggestions(plan_week))
+
         return render(
             request,
             "schedule/week_view.html",
@@ -268,6 +273,7 @@ class PlanWeekView(View):
                 "block_form": PlanBlockForm(),
                 "categories": Category.objects.all(),
                 "weekly_tasks": weekly_tasks,
+                "plugin_suggestions": plugin_suggestions,
                 "plan_sessions": plan_sessions,
                 "day_names": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
                 "stats": stats,
@@ -326,6 +332,24 @@ class PlanBlockCreateView(View):
                     )
                     if not block.plugin_slug:
                         block.plugin_slug = "running"
+                        block.save(update_fields=["plugin_slug"])
+                except Exception:
+                    pass
+            # Auto-create PracticeSession when dragged from a practice goal chip
+            practice_goal_id = data.get("practice_goal_id")
+            if practice_goal_id:
+                try:
+                    from timetrack.plugins.practice.models import PracticeGoal, PracticeSession
+                    goal = PracticeGoal.objects.get(pk=int(practice_goal_id))
+                    PracticeSession.objects.create(
+                        plan_block=block,
+                        goal=goal,
+                        instrument=goal.instrument,
+                        focus=goal.focus,
+                        planned_minutes=goal.duration_minutes,
+                    )
+                    if not block.plugin_slug:
+                        block.plugin_slug = "practice"
                         block.save(update_fields=["plugin_slug"])
                 except Exception:
                     pass

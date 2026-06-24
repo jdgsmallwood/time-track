@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}Practice Goals — TimeTrack{% endblock %}
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-6">
+
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Practice Goals</h1>
+      <p class="text-sm text-gray-500 mt-0.5">Recurring practice sessions to schedule each week. Drag them onto the calendar from the week view.</p>
+    </div>
+    <a href="{% url 'week-current' %}" class="btn-indigo text-sm">This week →</a>
+  </div>
+
+  {# ── Goal list ── #}
+  {% if goals %}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr class="text-left text-xs text-gray-500">
+          <th class="px-4 py-3 font-medium">Instrument · Focus</th>
+          <th class="px-4 py-3 font-medium">Duration</th>
+          <th class="px-4 py-3 font-medium hidden sm:table-cell">Times / week</th>
+          <th class="px-4 py-3 font-medium hidden sm:table-cell">Notes</th>
+          <th class="px-4 py-3 font-medium">Active</th>
+          <th class="px-4 py-3 font-medium"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for goal in goals %}
+        <tr class="hover:bg-gray-50 {% if not goal.is_active %}opacity-50{% endif %}">
+          <td class="px-4 py-3 font-medium">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#a855f7"></div>
+              {{ goal.title }}
+            </div>
+          </td>
+          <td class="px-4 py-3 text-gray-600">{{ goal.duration_minutes }} min</td>
+          <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ goal.recurrence_count }}×</td>
+          <td class="px-4 py-3 text-gray-500 hidden sm:table-cell text-xs">{{ goal.notes }}</td>
+          <td class="px-4 py-3">
+            <form method="post" action="{% url 'practice-goal-toggle' goal.pk %}" class="inline">
+              {% csrf_token %}
+              <button type="submit" class="text-xs px-2 py-0.5 rounded-full font-medium
+                {% if goal.is_active %}bg-purple-100 text-purple-700 hover:bg-purple-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+                {% if goal.is_active %}on{% else %}off{% endif %}
+              </button>
+            </form>
+          </td>
+          <td class="px-4 py-3 text-right">
+            <form method="post" action="{% url 'practice-goal-delete' goal.pk %}"
+                  onsubmit="return confirm('Delete \'{{ goal.title }}\'?')">
+              {% csrf_token %}
+              <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-500 mb-6">
+    No practice goals yet. Add one below.
+  </div>
+  {% endif %}
+
+  {# ── Add form ── #}
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+    <h2 class="text-sm font-semibold text-gray-700 mb-4">Add a new practice goal</h2>
+    <form method="post">
+      {% csrf_token %}
+      {% if form.non_field_errors %}
+      <div class="bg-red-50 border border-red-200 rounded-lg px-4 py-2 mb-4 text-sm text-red-700">
+        {{ form.non_field_errors }}
+      </div>
+      {% endif %}
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Instrument (optional)</label>
+          {{ form.instrument }}
+          {% if form.instrument.errors %}<p class="text-xs text-red-600 mt-1">{{ form.instrument.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Focus / type</label>
+          {{ form.focus }}
+          {% if form.focus.errors %}<p class="text-xs text-red-600 mt-1">{{ form.focus.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Duration (minutes)</label>
+          {{ form.duration_minutes }}
+          {% if form.duration_minutes.errors %}<p class="text-xs text-red-600 mt-1">{{ form.duration_minutes.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Times per week</label>
+          {{ form.recurrence_count }}
+          {% if form.recurrence_count.errors %}<p class="text-xs text-red-600 mt-1">{{ form.recurrence_count.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-gray-600 mb-1">Notes (optional)</label>
+          {{ form.notes }}
+        </div>
+      </div>
+      <div class="mt-4">
+        <button type="submit" class="btn-indigo text-sm">Add goal</button>
+      </div>
+    </form>
+  </div>
+
+</div>
+
+<style>
+  input[type=text], input[type=number], select, textarea {
+    display: block; width: 100%; border: 1px solid #e5e7eb; border-radius: .5rem;
+    padding: .375rem .625rem; font-size: .875rem; color: #111827;
+    background: #fff; outline: none;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus {
+    border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff;
+  }
+</style>
+{% endblock %}
