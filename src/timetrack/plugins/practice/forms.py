@@ -6,7 +6,7 @@ from .models import PracticeGoal, PracticeSession
 class PracticeGoalForm(forms.ModelForm):
     class Meta:
         model = PracticeGoal
-        fields = ["instrument", "focus", "duration_minutes", "recurrence_count", "notes", "is_active"]
+        fields = ["instrument", "focus", "duration_minutes", "recurrence_count", "category", "notes"]
 
 
 class PracticeSessionForm(forms.ModelForm):

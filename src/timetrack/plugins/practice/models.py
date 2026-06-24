@@ -19,6 +19,12 @@ class PracticeGoal(models.Model):
     recurrence_count = models.PositiveSmallIntegerField(
         default=1, help_text="How many times per week."
     )
+    category = models.ForeignKey(
+        "core.Category",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="practice_goals",
+    )
     notes = models.CharField(max_length=200, blank=True)
     is_active = models.BooleanField(default=True)
 
@@ -35,7 +41,7 @@ class PracticeGoal(models.Model):
 
     @property
     def color(self):
-        return "#a855f7"
+        return self.category.color if self.category else "#a855f7"
 
 
 class PracticeSession(models.Model):

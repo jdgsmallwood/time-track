@@ -73,6 +73,7 @@ class PracticePlugin(TimeTrackPlugin):
         goals = (
             PracticeGoal.objects
             .filter(is_active=True)
+            .select_related("category")
             .annotate(
                 scheduled_count=Count(
                     "sessions",
@@ -90,6 +91,7 @@ class PracticePlugin(TimeTrackPlugin):
                 "recurrence_count": g.recurrence_count,
                 "plugin_slug": self.slug,
                 "practice_goal_id": g.pk,
+                "category_pk": g.category_id or "",
             }
             for g in goals
         ]

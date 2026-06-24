@@ -320,7 +320,7 @@
                data-title="{{ session.title|escapejs }}"
                data-duration-mins="{{ session.estimated_minutes }}"
                data-color="#22c55e"
-               data-category-pk=""
+               data-category-pk="{{ exercise_category_pk }}"
                data-plugin-slug="running"
                data-practice-goal-id="">
             <div class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5" style="background:#22c55e"></div>
@@ -356,7 +356,7 @@
                data-title="{{ sugg.title|escapejs }}"
                data-duration-mins="{{ sugg.duration_minutes }}"
                data-color="{{ sugg.color }}"
-               data-category-pk=""
+               data-category-pk="{{ sugg.category_pk }}"
                data-plugin-slug="{{ sugg.plugin_slug }}">
             <div class="w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
                  style="background:{{ sugg.color }}"></div>

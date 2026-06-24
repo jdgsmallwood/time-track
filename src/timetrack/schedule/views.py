@@ -258,6 +258,11 @@ class PlanWeekView(View):
         for _plugin in registry.all():
             plugin_suggestions.extend(_plugin.get_suggestions(plan_week))
 
+        # Category PKs for chip defaults
+        from timetrack.core.models import Category as _Cat
+        _exercise_cat = _Cat.objects.filter(name="Exercise").first()
+        exercise_category_pk = _exercise_cat.pk if _exercise_cat else ""
+
         return render(
             request,
             "schedule/week_view.html",
@@ -274,6 +279,7 @@ class PlanWeekView(View):
                 "categories": Category.objects.all(),
                 "weekly_tasks": weekly_tasks,
                 "plugin_suggestions": plugin_suggestions,
+                "exercise_category_pk": exercise_category_pk,
                 "plan_sessions": plan_sessions,
                 "day_names": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
                 "stats": stats,
@@ -319,6 +325,17 @@ class PlanBlockCreateView(View):
             block = form.save(commit=False)
             block.week = week
             block.save()
+            # Apply plugin default categories when none supplied
+            if not block.category_id and block.plugin_slug:
+                from timetrack.core.models import Category as _Cat
+                _plugin_defaults = {"running": "Exercise", "practice": "Music"}
+                _cat_name = _plugin_defaults.get(block.plugin_slug)
+                if _cat_name:
+                    _cat = _Cat.objects.filter(name=_cat_name).first()
+                    if _cat:
+                        block.category = _cat
+                        block.save(update_fields=["category"])
+
             # Auto-create RunSession when dragged from a running plan session chip
             tps_id = data.get("training_plan_session_id")
             if tps_id:

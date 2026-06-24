@@ -74,7 +74,7 @@ const GRID = (() => {
 
     const el = document.createElement('div');
     el.id = 'block-' + block.id;
-    el.className = 'absolute rounded-lg cursor-pointer shadow-sm border border-white/40 select-none overflow-hidden transition-shadow hover:shadow-md block-chip';
+    el.className = 'absolute rounded-lg cursor-move shadow-sm border border-white/40 select-none overflow-hidden transition-shadow hover:shadow-md block-chip';
     el.dataset.blockId = block.id;
 
     const color = block.category_color || '#6366f1';
@@ -177,7 +177,8 @@ const GRID = (() => {
         },
       })
       .resizable({
-        edges: { top: '.block-resize-top', bottom: '.block-resize-bot' },
+        edges: { top: true, bottom: true },
+        margin: 8,
         modifiers: [
           interact.modifiers.snapSize({
             targets: [
@@ -229,13 +230,9 @@ const GRID = (() => {
   function blockInnerHTML(block) {
     const dur = minutesSinceMidnight(block.end_time) - minutesSinceMidnight(block.start_time);
     return `
-      <div class="block-resize-top" style="position:absolute;inset-x:0;top:0;height:8px;cursor:ns-resize;z-index:1"></div>
-      <div style="padding:2px 6px 2px 6px;pointer-events:none">
-        <div class="font-semibold text-xs leading-tight truncate">${block.title}</div>
-        ${dur > 30 ? `<div class="text-xs opacity-80">${block.start_time}–${block.end_time}</div>` : ''}
-        ${block.plugin_slug ? `<div class="text-xs opacity-70">${block.plugin_slug}</div>` : ''}
-      </div>
-      <div class="block-resize-bot" style="position:absolute;inset-x:0;bottom:0;height:8px;cursor:ns-resize;z-index:1"></div>
+      <div class="font-semibold text-xs leading-tight truncate px-2 pt-1">${block.title}</div>
+      ${dur > 30 ? `<div class="text-xs opacity-80 px-2">${block.start_time}–${block.end_time}</div>` : ''}
+      ${block.plugin_slug ? `<div class="text-xs opacity-70 px-2">${block.plugin_slug}</div>` : ''}
     `;
   }
 

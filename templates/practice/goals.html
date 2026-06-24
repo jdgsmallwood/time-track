@@ -19,6 +19,7 @@
         <tr class="text-left text-xs text-gray-500">
           <th class="px-4 py-3 font-medium">Instrument · Focus</th>
           <th class="px-4 py-3 font-medium">Duration</th>
+          <th class="px-4 py-3 font-medium hidden sm:table-cell">Category</th>
           <th class="px-4 py-3 font-medium hidden sm:table-cell">Times / week</th>
           <th class="px-4 py-3 font-medium hidden sm:table-cell">Notes</th>
           <th class="px-4 py-3 font-medium">Active</th>
@@ -35,6 +36,9 @@
             </div>
           </td>
           <td class="px-4 py-3 text-gray-600">{{ goal.duration_minutes }} min</td>
+          <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">
+            {% if goal.category %}{{ goal.category.icon }} {{ goal.category.name }}{% else %}<span class="text-gray-400">—</span>{% endif %}
+          </td>
           <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ goal.recurrence_count }}×</td>
           <td class="px-4 py-3 text-gray-500 hidden sm:table-cell text-xs">{{ goal.notes }}</td>
           <td class="px-4 py-3">
@@ -95,7 +99,11 @@
           {{ form.recurrence_count }}
           {% if form.recurrence_count.errors %}<p class="text-xs text-red-600 mt-1">{{ form.recurrence_count.errors|join:", " }}</p>{% endif %}
         </div>
-        <div class="col-span-2">
+        <div>
+          <label class="block text-xs font-medium text-gray-600 mb-1">Category (optional)</label>
+          {{ form.category }}
+        </div>
+        <div>
           <label class="block text-xs font-medium text-gray-600 mb-1">Notes (optional)</label>
           {{ form.notes }}
         </div>
