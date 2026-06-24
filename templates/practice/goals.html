@@ -28,36 +28,7 @@
       </thead>
       <tbody class="divide-y divide-gray-100">
         {% for goal in goals %}
-        <tr class="hover:bg-gray-50 {% if not goal.is_active %}opacity-50{% endif %}">
-          <td class="px-4 py-3 font-medium">
-            <div class="flex items-center gap-2">
-              <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:#a855f7"></div>
-              {{ goal.title }}
-            </div>
-          </td>
-          <td class="px-4 py-3 text-gray-600">{{ goal.duration_minutes }} min</td>
-          <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">
-            {% if goal.category %}{{ goal.category.icon }} {{ goal.category.name }}{% else %}<span class="text-gray-400">—</span>{% endif %}
-          </td>
-          <td class="px-4 py-3 text-gray-600 hidden sm:table-cell">{{ goal.recurrence_count }}×</td>
-          <td class="px-4 py-3 text-gray-500 hidden sm:table-cell text-xs">{{ goal.notes }}</td>
-          <td class="px-4 py-3">
-            <form method="post" action="{% url 'practice-goal-toggle' goal.pk %}" class="inline">
-              {% csrf_token %}
-              <button type="submit" class="text-xs px-2 py-0.5 rounded-full font-medium
-                {% if goal.is_active %}bg-purple-100 text-purple-700 hover:bg-purple-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
-                {% if goal.is_active %}on{% else %}off{% endif %}
-              </button>
-            </form>
-          </td>
-          <td class="px-4 py-3 text-right">
-            <form method="post" action="{% url 'practice-goal-delete' goal.pk %}"
-                  onsubmit="return confirm('Delete \'{{ goal.title }}\'?')">
-              {% csrf_token %}
-              <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete</button>
-            </form>
-          </td>
-        </tr>
+          {% include "practice/partials/goal_row.html" %}
         {% endfor %}
       </tbody>
     </table>

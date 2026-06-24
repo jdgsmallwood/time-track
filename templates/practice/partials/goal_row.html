@@ -1,0 +1,36 @@
+<tr id="goal-row-{{ goal.pk }}" class="hover:bg-gray-50 {% if not goal.is_active %}opacity-50{% endif %}">
+  <td class="px-4 py-3 font-medium text-sm">
+    <div class="flex items-center gap-2">
+      <div class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:{{ goal.color }}"></div>
+      {{ goal.title }}
+    </div>
+  </td>
+  <td class="px-4 py-3 text-gray-600 text-sm">{{ goal.duration_minutes }} min</td>
+  <td class="px-4 py-3 text-gray-600 text-sm hidden sm:table-cell">
+    {% if goal.category %}{{ goal.category.icon }} {{ goal.category.name }}{% else %}<span class="text-gray-400">—</span>{% endif %}
+  </td>
+  <td class="px-4 py-3 text-gray-600 text-sm hidden sm:table-cell">{{ goal.recurrence_count }}×</td>
+  <td class="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{{ goal.notes }}</td>
+  <td class="px-4 py-3">
+    <button hx-post="{% url 'practice-goal-toggle' goal.pk %}"
+            hx-target="#goal-row-{{ goal.pk }}"
+            hx-swap="outerHTML"
+            class="text-xs px-2 py-0.5 rounded-full font-medium
+              {% if goal.is_active %}bg-purple-100 text-purple-700 hover:bg-purple-200{% else %}bg-gray-100 text-gray-500 hover:bg-gray-200{% endif %}">
+      {% if goal.is_active %}on{% else %}off{% endif %}
+    </button>
+  </td>
+  <td class="px-4 py-3 text-right text-sm">
+    <div class="flex items-center justify-end gap-3">
+      <button hx-get="{% url 'practice-goal-edit' goal.pk %}"
+              hx-target="#goal-row-{{ goal.pk }}"
+              hx-swap="outerHTML"
+              class="text-xs text-indigo-600 hover:text-indigo-800">Edit</button>
+      <form method="post" action="{% url 'practice-goal-delete' goal.pk %}"
+            onsubmit="return confirm('Delete \'{{ goal.title }}\'?')">
+        {% csrf_token %}
+        <button type="submit" class="text-xs text-red-500 hover:text-red-700">Delete</button>
+      </form>
+    </div>
+  </td>
+</tr>

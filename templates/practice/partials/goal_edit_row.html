@@ -1,0 +1,55 @@
+<tr id="goal-row-{{ goal.pk }}" class="bg-indigo-50">
+  <td colspan="7" class="px-4 py-3">
+    <form hx-post="{% url 'practice-goal-edit' goal.pk %}"
+          hx-target="#goal-row-{{ goal.pk }}"
+          hx-swap="outerHTML"
+          class="flex flex-wrap items-end gap-3">
+      {% csrf_token %}
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Instrument</label>
+        <input type="text" name="instrument" value="{{ form.instance.instrument }}"
+               class="border border-gray-300 rounded-lg px-2 py-1 text-sm w-32 focus:outline-none focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Focus</label>
+        <select name="focus" class="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-indigo-500">
+          {% for val, label in form.fields.focus.choices %}
+          <option value="{{ val }}" {% if val == form.instance.focus %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Duration (min)</label>
+        <input type="number" name="duration_minutes" value="{{ form.instance.duration_minutes }}"
+               class="border border-gray-300 rounded-lg px-2 py-1 text-sm w-20 focus:outline-none focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">×/week</label>
+        <input type="number" name="recurrence_count" value="{{ form.instance.recurrence_count }}"
+               class="border border-gray-300 rounded-lg px-2 py-1 text-sm w-16 focus:outline-none focus:border-indigo-500">
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Category</label>
+        <select name="category" class="border border-gray-300 rounded-lg px-2 py-1 text-sm focus:outline-none focus:border-indigo-500">
+          <option value="">— none —</option>
+          {% for cat in form.fields.category.queryset %}
+          <option value="{{ cat.pk }}" {% if cat == form.instance.category %}selected{% endif %}>{{ cat.icon }} {{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+        <input type="text" name="notes" value="{{ form.instance.notes }}"
+               class="border border-gray-300 rounded-lg px-2 py-1 text-sm w-36 focus:outline-none focus:border-indigo-500">
+      </div>
+      <div class="flex gap-2 pb-0.5">
+        <button type="submit" class="btn-indigo text-xs">Save</button>
+        <button type="button"
+                hx-get="{% url 'practice-goal-row' goal.pk %}"
+                hx-target="#goal-row-{{ goal.pk }}"
+                hx-swap="outerHTML"
+                class="text-xs text-gray-500 hover:text-gray-700 px-2 py-1 border border-gray-300 rounded-lg">Cancel</button>
+      </div>
+    </form>
+  </td>
+</tr>
