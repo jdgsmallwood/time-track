@@ -176,6 +176,8 @@ class PlanWeekView(View):
         prev_monday = start - timedelta(days=7)
         next_monday = start + timedelta(days=7)
         days = [start + timedelta(days=i) for i in range(7)]
+        today = date.today()
+        today_day_index = (today - start).days if 0 <= (today - start).days <= 6 else 0
         registry = get_registry()
         grid_data = json.dumps([]) if not plan_week else json.dumps(
             _blocks_to_grid(plan_week.blocks.select_related("category").all(), date_field=True)
@@ -290,6 +292,7 @@ class PlanWeekView(View):
                 "viewed_tplan_week": viewed_tplan_week,
                 "plan_estimated_minutes": plan_estimated_minutes,
                 "strava_connected": strava_connected,
+                "today_day_index": today_day_index,
             },
         )
 
