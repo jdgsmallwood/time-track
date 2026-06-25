@@ -37,6 +37,13 @@ class TimeTrackPlugin:
         """Return extra text to append to the Google Calendar event description."""
         return ""
 
+    def init_block_data(self, plan_block) -> None:
+        """Create default plugin data for a newly created plan block.
+
+        Called when a block is created with plugin_slug set but without
+        drag-from-chip data. Use get_or_create so this is safe to call twice.
+        """
+
     def get_suggestions(self, plan_week) -> list:
         """Return draggable suggestion chips for the week view 'To Schedule' panel.
 

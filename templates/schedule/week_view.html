@@ -72,14 +72,14 @@
   <div id="strava-sync-result" class="px-2 mb-1 text-sm text-green-700"></div>
 
   {# ── Training plan banner ── #}
-  {% if current_plan_week %}
+  {% if viewed_tplan_week %}
   <div class="mx-2 mb-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 flex items-center gap-3 text-sm">
     <span class="text-blue-600">📋</span>
     <span class="text-blue-800 font-medium">
-      Week {{ current_plan_week.week_number }} of {{ active_plan.total_weeks }}
-      · <span class="capitalize">{{ current_plan_week.phase }}</span> phase
-      · {{ current_plan_week.target_km }} km target
-      {% if plan_estimated_minutes %}· ~{{ plan_estimated_minutes }}min{% endif %}
+      Week {{ viewed_tplan_week.week_number }} of {{ active_plan.total_weeks }}
+      · <span class="capitalize">{{ viewed_tplan_week.phase }}</span> phase
+      · {{ viewed_tplan_week.target_km }} km target
+      {% if plan_estimated_minutes and viewed_tplan_week == current_plan_week %}· ~{{ plan_estimated_minutes }}min{% endif %}
     </span>
     <a href="{% url 'training-plan-detail' pk=active_plan.pk %}"
        class="ml-auto text-blue-600 hover:underline text-xs">View plan →</a>

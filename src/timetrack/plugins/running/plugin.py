@@ -33,6 +33,9 @@ class RunningPlugin(TimeTrackPlugin):
             planned_pace=src.planned_pace,
         )
 
+    def init_block_data(self, plan_block) -> None:
+        RunSession.objects.get_or_create(plan_block=plan_block, defaults={"run_type": "base"})
+
     def get_template_form(self, template_block, data=None):
         instance = RunSession.objects.filter(template_block=template_block).first()
         return RunSessionForm(data, instance=instance, prefix="run")

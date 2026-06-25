@@ -37,6 +37,9 @@ class PracticePlugin(TimeTrackPlugin):
             planned_minutes=src.planned_minutes,
         )
 
+    def init_block_data(self, plan_block) -> None:
+        PracticeSession.objects.get_or_create(plan_block=plan_block, defaults={"focus": "free"})
+
     def get_template_form(self, template_block, data=None):
         instance = PracticeSession.objects.filter(template_block=template_block).first()
         return PracticeSessionForm(data, instance=instance, prefix="practice")

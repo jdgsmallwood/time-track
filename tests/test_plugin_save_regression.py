@@ -272,3 +272,82 @@ def test_week_view_includes_practice_suggestions(auth_client, plan_week, db):
     response = auth_client.get(f"/schedule/weeks/{plan_week.start_date}/")
     assert response.status_code == 200
     assert b"Cello" in response.content or b"Sight Reading" in response.content
+
+
+# ─── init_block_data: manually-created blocks with plugin ────────────────────
+
+@pytest.mark.django_db
+def test_create_running_block_via_form_inits_run_session(auth_client, plan_week):
+    """Creating a block with plugin_slug=running via the New Block form auto-creates a RunSession."""
+    response = auth_client.post(
+        f"/schedule/plan-weeks/{plan_week.pk}/blocks/",
+        {
+            "title": "Morning Run",
+            "date": "2024-06-17",
+            "start_time": "07:00",
+            "end_time": "08:00",
+            "plugin_slug": "running",
+        },
+    )
+    assert response.status_code == 200
+    block = PlanBlock.objects.get(title="Morning Run")
+    assert block.plugin_slug == "running"
+    assert RunSession.objects.filter(plan_block=block).exists()
+
+
+@pytest.mark.django_db
+def test_create_practice_block_via_form_inits_practice_session(auth_client, plan_week):
+    """Creating a block with plugin_slug=practice via the New Block form auto-creates a PracticeSession."""
+    response = auth_client.post(
+        f"/schedule/plan-weeks/{plan_week.pk}/blocks/",
+        {
+            "title": "Piano Practice",
+            "date": "2024-06-17",
+            "start_time": "18:00",
+            "end_time": "19:00",
+            "plugin_slug": "practice",
+        },
+    )
+    assert response.status_code == 200
+    block = PlanBlock.objects.get(title="Piano Practice")
+    assert block.plugin_slug == "practice"
+    assert PracticeSession.objects.filter(plan_block=block).exists()
+
+
+@pytest.mark.django_db
+def test_edit_manually_created_running_block_persists(auth_client, plan_week):
+    """Saving the edit panel for a manually-created running block updates the RunSession."""
+    response = auth_client.post(
+        f"/schedule/plan-weeks/{plan_week.pk}/blocks/",
+        {
+            "title": "Evening Run",
+            "date": "2024-06-17",
+            "start_time": "19:00",
+            "end_time": "20:00",
+            "plugin_slug": "running",
+        },
+    )
+    block = PlanBlock.objects.get(title="Evening Run")
+
+    # Now edit the block via the edit panel (what the UI does on Save)
+    response = auth_client.post(
+        f"/schedule/plan-blocks/{block.pk}/",
+        {
+            "title": "Evening Run",
+            "date": "2024-06-17",
+            "start_time": "19:00",
+            "end_time": "20:00",
+            "plugin_slug": "running",
+            "weekly_task": "",
+            "run-run_type": "tempo",
+            "run-planned_km": "10.0",
+            "run-planned_pace": "5:00",
+            "run-actual_km": "",
+            "run-notes": "",
+        },
+    )
+    assert response.status_code == 200
+    session = RunSession.objects.get(plan_block=block)
+    assert session.run_type == "tempo"
+    from decimal import Decimal
+    assert session.planned_km == Decimal("10.0")

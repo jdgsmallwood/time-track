@@ -185,6 +185,7 @@ class PlanWeekView(View):
         # Training plan banner + suggestions
         active_plan = None
         current_plan_week = None
+        viewed_tplan_week = None
         plan_estimated_minutes = None
         plan_sessions = []
         strava_connected = False
@@ -286,6 +287,7 @@ class PlanWeekView(View):
                 "time_zone": settings.TIME_ZONE,
                 "active_plan": active_plan,
                 "current_plan_week": current_plan_week,
+                "viewed_tplan_week": viewed_tplan_week,
                 "plan_estimated_minutes": plan_estimated_minutes,
                 "strava_connected": strava_connected,
             },
@@ -371,6 +373,13 @@ class PlanBlockCreateView(View):
                 except Exception:
                     pass
             registry = get_registry()
+            # For blocks created manually with a plugin (no chip drag), init
+            # the plugin data row now so the edit panel always updates an
+            # existing record rather than trying to insert a new one.
+            if block.plugin_slug and not tps_id and not practice_goal_id:
+                _plugin = registry.get(block.plugin_slug)
+                if _plugin:
+                    _plugin.init_block_data(block)
             plugin = registry.get(block.plugin_slug) if block.plugin_slug else None
             return render(
                 request,
