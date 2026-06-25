@@ -179,44 +179,46 @@ const GRID = (() => {
       .resizable({
         edges: { top: true, bottom: true },
         margin: 8,
-        modifiers: [
-          interact.modifiers.snapSize({
-            targets: [
-              (_w, h) => ({ height: Math.round(h / (SNAP_MINUTES * SLOT_PX)) * (SNAP_MINUTES * SLOT_PX) }),
-            ],
-          }),
-        ],
         listeners: {
           move(event) {
-            el.style.height = `${event.rect.height}px`;
+            const gridTop = gridEl.getBoundingClientRect().top;
             if (event.edges && event.edges.top) {
-              // Top edge: keep bottom fixed, slide the top.
-              // event.rect.top is viewport-relative; subtract grid origin to get
-              // the CSS top value (relative to positioned parent gridEl).
-              const gridTop = gridEl.getBoundingClientRect().top;
-              el.style.top = `${Math.max(0, event.rect.top - gridTop)}px`;
+              // Top edge: snap start time, hold end time fixed.
+              // Snapping the absolute height via interact's snapSize can push the top
+              // downward when the initial height isn't a 15-min multiple, making the
+              // block shorter instead of taller. Snap here instead.
+              const rawTopPx = Math.max(0, event.rect.top - gridTop);
+              const rawStart = START_HOUR * 60 + rawTopPx / SLOT_PX;
+              const endMins = minutesSinceMidnight(block.end_time);
+              const snappedStart = Math.max(
+                START_HOUR * 60,
+                Math.min(endMins - SNAP_MINUTES, snapToGrid(rawStart))
+              );
+              const newTopPx = (snappedStart - START_HOUR * 60) * SLOT_PX;
+              el.style.top = `${newTopPx}px`;
+              el.style.height = `${(endMins - snappedStart) * SLOT_PX}px`;
+            } else {
+              // Bottom edge: snap end time, hold start time fixed.
+              const rawH = event.rect.height;
+              const startMins = minutesSinceMidnight(block.start_time);
+              const snappedEnd = Math.min(
+                END_HOUR * 60,
+                Math.max(startMins + SNAP_MINUTES, snapToGrid(startMins + rawH / SLOT_PX))
+              );
+              el.style.height = `${(snappedEnd - startMins) * SLOT_PX}px`;
             }
           },
           end(event) {
             const isTop = event.edges && event.edges.top;
             if (isTop) {
-              // Snap the new start to the nearest 15-min slot.
               const topPx = parseFloat(el.style.top) || 0;
-              const rawStart = START_HOUR * 60 + topPx / SLOT_PX;
-              const endMins = minutesSinceMidnight(block.end_time);
-              const newStart = minsToTimeStr(Math.max(
-                START_HOUR * 60,
-                Math.min(endMins - SNAP_MINUTES, snapToGrid(rawStart))
-              ));
+              const newStart = minsToTimeStr(START_HOUR * 60 + topPx / SLOT_PX);
               block.start_time = newStart;
               patchBlock(block, { start_time: newStart });
             } else {
-              // Snap the new end to the nearest 15-min slot.
-              // Read from el.style.height (set by move) — more reliable than event.rect.
               const h = parseFloat(el.style.height) || event.rect.height || 0;
-              const durationMins = Math.max(SNAP_MINUTES, snapToGrid(h / SLOT_PX));
               const startMins = minutesSinceMidnight(block.start_time);
-              const newEnd = minsToTimeStr(Math.min(END_HOUR * 60, startMins + durationMins));
+              const newEnd = minsToTimeStr(startMins + h / SLOT_PX);
               block.end_time = newEnd;
               patchBlock(block, { end_time: newEnd });
             }

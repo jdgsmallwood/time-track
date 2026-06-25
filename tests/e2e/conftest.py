@@ -53,6 +53,20 @@ def plan_week_with_block(plan_week):
     return plan_week, block
 
 
+@pytest.fixture
+def plan_week_with_odd_block(plan_week):
+    """Block with a 35-min duration — not a multiple of SNAP_MINUTES (15 min)."""
+    from timetrack.schedule.models import PlanBlock
+    block = PlanBlock.objects.create(
+        week=plan_week,
+        title="Odd block",
+        date=_monday(),
+        start_time=time(8, 0),
+        end_time=time(8, 35),
+    )
+    return plan_week, block
+
+
 # ── browser fixtures ──────────────────────────────────────────────────────────
 
 
@@ -95,6 +109,18 @@ def week_page_with_block(authenticated_page, week_url, plan_week_with_block):
     plan_week, block = plan_week_with_block
     authenticated_page.goto(week_url)
     # Wait for the specific block chip to be rendered by grid.js
+    authenticated_page.wait_for_selector(f'#block-{block.pk}', state='visible')
+    authenticated_page.wait_for_function(
+        "typeof GRID !== 'undefined' && typeof GRID.updateBlock === 'function'"
+    )
+    return authenticated_page, block
+
+
+@pytest.fixture
+def week_page_with_odd_block(authenticated_page, week_url, plan_week_with_odd_block):
+    """Week page pre-loaded with a non-15-min-aligned block."""
+    plan_week, block = plan_week_with_odd_block
+    authenticated_page.goto(week_url)
     authenticated_page.wait_for_selector(f'#block-{block.pk}', state='visible')
     authenticated_page.wait_for_function(
         "typeof GRID !== 'undefined' && typeof GRID.updateBlock === 'function'"

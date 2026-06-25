@@ -286,6 +286,32 @@ def test_resize_top_persists_after_reload(week_page_with_block):
     )
 
 
+def test_resize_top_extends_not_shrinks_odd_duration(week_page_with_odd_block):
+    """Top-edge drag on a non-15-min block extends it backwards; it must not shrink.
+
+    Regression: interact.js snapSize snapped the absolute height to the nearest
+    30-px multiple. For a 35-min (70 px) block, a small upward drag could cause
+    snapSize to round the height DOWN to 60 px — pushing the top edge *below*
+    its original position and making start_time later, not earlier.
+    """
+    page, block = week_page_with_odd_block
+
+    bb = page.locator(f'#block-{block.pk}').bounding_box()
+    edge_x = bb['x'] + bb['width'] / 2
+    edge_y = bb['y'] + 4  # just inside the top resize zone
+
+    # 30 px up = 15 min earlier.  Old code: snapSize could round 70+30=100 px
+    # DOWN to 90 px, placing the top 20 px above original — but a smaller drag
+    # (e.g. 4 px, 100→104→snap to 90) would push the top DOWN, shrinking it.
+    drag(page, edge_x, edge_y, edge_x, edge_y - 30)
+    page.wait_for_timeout(300)
+
+    text = page.locator(f'#block-{block.pk}').inner_text()
+    assert re.search(r'07:', text), (
+        f"Expected start time earlier than 08:00 after top-edge drag; got {text!r}"
+    )
+
+
 # ── category in create popover ────────────────────────────────────────────────
 
 def test_category_dropdown_present_when_categories_exist(week_page_with_category):
