@@ -197,6 +197,7 @@ const GRID = (() => {
               const newTopPx = (snappedStart - START_HOUR * 60) * SLOT_PX;
               el.style.top = `${newTopPx}px`;
               el.style.height = `${(endMins - snappedStart) * SLOT_PX}px`;
+              liveUpdateLabel(el, snappedStart, endMins);
             } else {
               // Bottom edge: snap end time, hold start time fixed.
               const rawH = event.rect.height;
@@ -206,6 +207,7 @@ const GRID = (() => {
                 Math.max(startMins + SNAP_MINUTES, snapToGrid(startMins + rawH / SLOT_PX))
               );
               el.style.height = `${(snappedEnd - startMins) * SLOT_PX}px`;
+              liveUpdateLabel(el, startMins, snappedEnd);
             }
           },
           end(event) {
@@ -233,13 +235,31 @@ const GRID = (() => {
     const dur = minutesSinceMidnight(block.end_time) - minutesSinceMidnight(block.start_time);
     return `
       <div class="font-semibold text-xs leading-tight truncate px-2 pt-1">${block.title}</div>
-      ${dur > 30 ? `<div class="text-xs opacity-80 px-2">${block.start_time}–${block.end_time}</div>` : ''}
+      ${dur > 30 ? `<div class="block-time text-xs opacity-80 px-2">${block.start_time}–${block.end_time}</div>` : ''}
       ${block.plugin_slug ? `<div class="text-xs opacity-70 px-2">${block.plugin_slug}</div>` : ''}
     `;
   }
 
   function refreshBlockContent(el, block) {
     el.innerHTML = blockInnerHTML(block);
+  }
+
+  // Updates the time label inside a block element during a live resize, without
+  // touching the title or plugin rows. Shows/hides the label when the block
+  // crosses the 30-minute threshold.
+  function liveUpdateLabel(el, startMins, endMins) {
+    const dur = endMins - startMins;
+    let timeEl = el.querySelector('.block-time');
+    if (dur > 30) {
+      if (!timeEl) {
+        timeEl = document.createElement('div');
+        timeEl.className = 'block-time text-xs opacity-80 px-2';
+        el.firstElementChild.insertAdjacentElement('afterend', timeEl);
+      }
+      timeEl.textContent = `${minsToTimeStr(startMins)}–${minsToTimeStr(endMins)}`;
+    } else if (timeEl) {
+      timeEl.remove();
+    }
   }
 
   function updateBlockPosition(block) {
