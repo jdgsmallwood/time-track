@@ -31,6 +31,11 @@ from .services import (
 )
 
 
+def _trigger_week_stats_changed(response, week_pk):
+    response["HX-Trigger"] = json.dumps({"weekStatsChanged": {"weekPk": week_pk}})
+    return response
+
+
 # ─── Template Weeks ──────────────────────────────────────────────────────────
 
 class TemplateWeekListView(View):
@@ -537,11 +542,12 @@ class PlanBlockUpdateView(View):
             # mark week as draft again after edit
             block.week.status = "draft"
             block.week.save(update_fields=["status"])
-            return render(
+            response = render(
                 request,
                 "schedule/partials/block_chip.html",
                 {"block": block, "plugin": plugin, "is_template": False},
             )
+            return _trigger_week_stats_changed(response, block.week_id)
         return JsonResponse({"errors": form.errors}, status=400)
 
     def patch(self, request, pk):

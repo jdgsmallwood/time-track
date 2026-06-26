@@ -367,6 +367,13 @@ const GRID = (() => {
     }
   }
 
+  document.body.addEventListener('weekStatsChanged', (event) => {
+    const weekPk = event.detail && event.detail.weekPk;
+    if (!weekPk || String(weekPk) === String(OWNER_PK)) {
+      refreshStats();
+    }
+  });
+
   async function postBlock(body) {
     const csrf = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
     try {

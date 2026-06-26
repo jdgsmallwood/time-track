@@ -1,4 +1,5 @@
 """Smoke tests and view tests for schedule, core, and gcal."""
+import json
 from datetime import date, time
 
 import pytest
@@ -182,6 +183,26 @@ def test_plan_block_patch_position(auth_client, plan_block):
     assert response.status_code == 200
     plan_block.refresh_from_db()
     assert str(plan_block.date) == "2024-06-18"
+
+
+def test_plan_block_update_triggers_week_stats_refresh(auth_client, plan_block):
+    response = auth_client.post(
+        f"/schedule/plan-blocks/{plan_block.pk}/",
+        {
+            "title": "Updated block",
+            "date": "2024-06-17",
+            "start_time": "09:00",
+            "end_time": "10:30",
+            "notes": "",
+            "plugin_slug": "",
+            "weekly_task": "",
+        },
+    )
+
+    assert response.status_code == 200
+    assert json.loads(response["HX-Trigger"]) == {
+        "weekStatsChanged": {"weekPk": plan_block.week_id}
+    }
 
 
 def test_plan_block_delete(auth_client, plan_block):
