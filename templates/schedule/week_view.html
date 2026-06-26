@@ -27,6 +27,12 @@
             {% else %}bg-yellow-100 text-yellow-700{% endif %}">
             {{ plan_week.status }}{% if plan_week.source_template %} · {{ plan_week.source_template.name }}{% endif %}
           </span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
+            Planning {% if plan_week.reflection.planning_completed_at %}done{% else %}open{% endif %}
+          </span>
+          <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
+            Review {% if plan_week.reflection.review_completed_at %}done{% else %}open{% endif %}
+          </span>
           {% endif %}
         </div>
         <p class="text-xs text-gray-400 mt-0.5">{{ time_zone }}</p>
@@ -38,6 +44,18 @@
     {# Action buttons — scroll on small screens #}
     <div class="flex gap-1.5 flex-wrap items-center">
       {% if plan_week %}
+      {% if planning_prompt %}
+      <button hx-get="{% url 'plan-week-planning' week_pk=plan_week.pk %}"
+              hx-target="#modal-root"
+              hx-swap="innerHTML"
+              class="btn-indigo text-xs">Plan week</button>
+      {% endif %}
+      {% if review_prompt %}
+      <button hx-get="{% url 'plan-week-review' week_pk=plan_week.pk %}"
+              hx-target="#modal-root"
+              hx-swap="innerHTML"
+              class="btn-outline text-xs">Review week</button>
+      {% endif %}
       <button @click="showStats = !showStats"
         class="btn-ghost text-xs">📊 Stats</button>
       {% endif %}

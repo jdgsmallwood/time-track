@@ -2,7 +2,9 @@ from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 
-from .models import PlanBlock, PlanWeek, TemplateWeek
+from django.utils import timezone
+
+from .models import PlanBlock, PlanWeek, PlanWeekReflection, TemplateWeek, WeeklyGoal
 
 
 def iso_week_monday(year: int, week: int) -> date:
@@ -66,6 +68,121 @@ def clone_template_to_week(
                 plugin.clone_block_data(tb, plan_block)
 
     return plan_week
+
+
+def get_or_create_reflection(plan_week: PlanWeek) -> PlanWeekReflection:
+    reflection, _created = PlanWeekReflection.objects.get_or_create(week=plan_week)
+    return reflection
+
+
+def should_show_planning_prompt(plan_week: PlanWeek | None, today: date | None = None) -> bool:
+    if not plan_week:
+        return False
+    reflection = getattr(plan_week, "reflection", None)
+    if reflection and reflection.planning_completed_at:
+        return False
+
+    today = today or timezone.localdate()
+    current_monday = week_monday(today)
+    if plan_week.start_date == current_monday:
+        return today.weekday() <= 3
+    return True
+
+
+def should_show_review_prompt(plan_week: PlanWeek | None, today: date | None = None) -> bool:
+    if not plan_week:
+        return False
+    reflection = getattr(plan_week, "reflection", None)
+    if reflection and reflection.review_completed_at:
+        return False
+
+    today = today or timezone.localdate()
+    current_monday = week_monday(today)
+    if plan_week.start_date < current_monday:
+        return True
+    if plan_week.start_date == current_monday:
+        return today.weekday() >= 4
+    return False
+
+
+def complete_planning(plan_week: PlanWeek, reflection_data: dict, goals_data: list[dict]) -> PlanWeekReflection:
+    reflection = get_or_create_reflection(plan_week)
+    reflection.weekly_intention = reflection_data.get("weekly_intention", "")
+    reflection.top_priorities = reflection_data.get("top_priorities", "")
+    reflection.planning_completed_at = timezone.now()
+    reflection.save()
+
+    plan_week.goals.all().delete()
+    goals = []
+    for data in goals_data:
+        title = data.get("title", "").strip()
+        if not title:
+            continue
+        goals.append(
+            WeeklyGoal(
+                week=plan_week,
+                title=title,
+                category=data.get("category", "").strip(),
+                priority=data.get("priority") or "medium",
+                notes=data.get("notes", "").strip(),
+            )
+        )
+    if goals:
+        WeeklyGoal.objects.bulk_create(goals)
+    return reflection
+
+
+def copy_selected_goals_to_next_week(plan_week: PlanWeek, selected_goal_ids: list[int]) -> list[WeeklyGoal]:
+    if not selected_goal_ids:
+        return []
+
+    copied = []
+    goals = list(
+        plan_week.goals
+        .filter(pk__in=selected_goal_ids)
+        .exclude(status="done")
+        .order_by("created_at")
+    )
+    if not goals:
+        return []
+
+    next_week, _created = PlanWeek.objects.get_or_create(
+        start_date=plan_week.start_date + timedelta(days=7),
+        defaults={"source_template": plan_week.source_template},
+    )
+    for goal in goals:
+        copied.append(
+            WeeklyGoal.objects.create(
+                week=next_week,
+                title=goal.title,
+                category=goal.category,
+                priority=goal.priority,
+                notes=goal.notes,
+                source_goal=goal,
+            )
+        )
+    return copied
+
+
+def complete_review(
+    plan_week: PlanWeek,
+    reflection_data: dict,
+    goal_statuses: dict[int, str],
+    carryover_goal_ids: list[int],
+) -> PlanWeekReflection:
+    for goal in plan_week.goals.all():
+        status = goal_statuses.get(goal.pk)
+        if status in {"planned", "done", "skipped"}:
+            goal.status = status
+            goal.save(update_fields=["status", "updated_at"])
+
+    reflection = get_or_create_reflection(plan_week)
+    for field in ("wins", "misses", "lessons", "next_week_notes", "energy_score"):
+        setattr(reflection, field, reflection_data.get(field))
+    reflection.review_completed_at = timezone.now()
+    reflection.save()
+    copy_selected_goals_to_next_week(plan_week, carryover_goal_ids)
+    return reflection
 
 
 def week_stats(plan_week) -> dict:

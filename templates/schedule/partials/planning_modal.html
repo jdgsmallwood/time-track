@@ -1,0 +1,98 @@
+<div class="fixed inset-0 z-50 bg-gray-900/50 flex items-start justify-center p-4 overflow-y-auto">
+  <div class="bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-2xl mt-10">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+      <div>
+        <h2 class="font-semibold text-gray-900">Plan week</h2>
+        <p class="text-xs text-gray-500">{{ week.start_date|date:"j M" }} - {{ week.end_date|date:"j M Y" }}</p>
+      </div>
+      <button type="button"
+              onclick="document.getElementById('modal-root').innerHTML = ''"
+              class="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+    </div>
+
+    <form hx-post="{% url 'plan-week-planning' week_pk=week.pk %}"
+          hx-target="#modal-root"
+          hx-swap="innerHTML"
+          class="p-5 space-y-5">
+      {% csrf_token %}
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ reflection_form.weekly_intention.id_for_label }}">Weekly intention</label>
+        <textarea name="weekly_intention" id="{{ reflection_form.weekly_intention.id_for_label }}" rows="3"
+                  class="form-input w-full text-sm">{{ reflection_form.weekly_intention.value|default_if_none:"" }}</textarea>
+        {% if reflection_form.weekly_intention.errors %}<div class="text-xs text-red-600 mt-1">{{ reflection_form.weekly_intention.errors }}</div>{% endif %}
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ reflection_form.top_priorities.id_for_label }}">Top priorities</label>
+        <textarea name="top_priorities" id="{{ reflection_form.top_priorities.id_for_label }}" rows="4"
+                  class="form-input w-full text-sm">{{ reflection_form.top_priorities.value|default_if_none:"" }}</textarea>
+        {% if reflection_form.top_priorities.errors %}<div class="text-xs text-red-600 mt-1">{{ reflection_form.top_priorities.errors }}</div>{% endif %}
+      </div>
+
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-gray-900">Goals</h3>
+          <button type="button"
+                  class="btn-outline text-xs"
+                  onclick="document.getElementById('planning-goals').insertAdjacentHTML('beforeend', document.getElementById('planning-goal-template').innerHTML)">
+            Add goal
+          </button>
+        </div>
+        <div id="planning-goals" class="space-y-3">
+          {% for goal in existing_goals %}
+          <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 border border-gray-100 rounded-lg p-3">
+            <input type="text" name="goal_title" value="{{ goal.title }}" class="form-input text-sm sm:col-span-3" placeholder="Goal">
+            <input type="text" name="goal_category" value="{{ goal.category }}" class="form-input text-sm" placeholder="Category">
+            <select name="goal_priority" class="form-select text-sm">
+              {% for value, label in priority_choices %}
+              <option value="{{ value }}" {% if goal.priority == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+            <textarea name="goal_notes" class="form-input text-sm sm:col-span-6" rows="2" placeholder="Notes">{{ goal.notes }}</textarea>
+          </div>
+          {% empty %}
+          <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 border border-gray-100 rounded-lg p-3">
+            <input type="text" name="goal_title" class="form-input text-sm sm:col-span-3" placeholder="Goal">
+            <input type="text" name="goal_category" class="form-input text-sm" placeholder="Category">
+            <select name="goal_priority" class="form-select text-sm">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <textarea name="goal_notes" class="form-input text-sm sm:col-span-6" rows="2" placeholder="Notes"></textarea>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 border border-gray-100 rounded-lg p-3">
+            <input type="text" name="goal_title" class="form-input text-sm sm:col-span-3" placeholder="Goal">
+            <input type="text" name="goal_category" class="form-input text-sm" placeholder="Category">
+            <select name="goal_priority" class="form-select text-sm">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <textarea name="goal_notes" class="form-input text-sm sm:col-span-6" rows="2" placeholder="Notes"></textarea>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+        <button type="button" onclick="document.getElementById('modal-root').innerHTML = ''" class="btn-outline text-sm">Cancel</button>
+        <button type="submit" class="btn-indigo text-sm">Save planning</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<template id="planning-goal-template">
+  <div class="grid grid-cols-1 sm:grid-cols-6 gap-2 border border-gray-100 rounded-lg p-3">
+    <input type="text" name="goal_title" class="form-input text-sm sm:col-span-3" placeholder="Goal">
+    <input type="text" name="goal_category" class="form-input text-sm" placeholder="Category">
+    <select name="goal_priority" class="form-select text-sm">
+      <option value="high">High</option>
+      <option value="medium" selected>Medium</option>
+      <option value="low">Low</option>
+    </select>
+    <textarea name="goal_notes" class="form-input text-sm sm:col-span-6" rows="2" placeholder="Notes"></textarea>
+  </div>
+</template>

@@ -18,9 +18,17 @@
         <div class="font-semibold text-gray-900 group-hover:text-indigo-700 text-sm">
           {{ w.start_date }} – {{ w.end_date }}
         </div>
-        {% if w.source_template %}
-        <div class="text-xs text-gray-400 mt-0.5">from: {{ w.source_template.name }}</div>
-        {% endif %}
+      {% if w.source_template %}
+      <div class="text-xs text-gray-400 mt-0.5">from: {{ w.source_template.name }}</div>
+      {% endif %}
+      <div class="mt-1 flex gap-1 flex-wrap">
+        <span class="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+          Planning {% if w.reflection.planning_completed_at %}done{% else %}open{% endif %}
+        </span>
+        <span class="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">
+          Review {% if w.reflection.review_completed_at %}done{% else %}open{% endif %}
+        </span>
+      </div>
       </div>
       <span class="text-xs px-2 py-1 rounded-full
         {% if w.status == 'synced' %}bg-green-100 text-green-700{% else %}bg-yellow-100 text-yellow-700{% endif %}">

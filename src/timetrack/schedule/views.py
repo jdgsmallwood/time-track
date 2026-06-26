@@ -9,9 +9,26 @@ from django.views import View
 
 from timetrack.plugins.registry import get_registry
 
-from .forms import CloneTemplateForm, PlanBlockForm, TemplateBlockForm, TemplateWeekForm, WeeklyTaskForm
+from .forms import (
+    CloneTemplateForm,
+    PlanningReflectionForm,
+    PlanBlockForm,
+    ReviewReflectionForm,
+    TemplateBlockForm,
+    TemplateWeekForm,
+    WeeklyTaskForm,
+)
 from .models import PlanBlock, PlanWeek, TemplateBlock, TemplateWeek, WeeklyTask
-from .services import clone_template_to_week, iso_week_monday, week_monday, week_stats
+from .services import (
+    clone_template_to_week,
+    complete_planning,
+    complete_review,
+    get_or_create_reflection,
+    should_show_planning_prompt,
+    should_show_review_prompt,
+    week_monday,
+    week_stats,
+)
 
 
 # ─── Template Weeks ──────────────────────────────────────────────────────────
@@ -160,7 +177,7 @@ def _current_or_next_monday() -> date:
 
 class PlanWeekListView(View):
     def get(self, request):
-        weeks = PlanWeek.objects.select_related("source_template").order_by("-start_date")
+        weeks = PlanWeek.objects.select_related("source_template", "reflection").order_by("-start_date")
         return render(request, "schedule/week_list.html", {"weeks": weeks})
 
 
@@ -183,6 +200,8 @@ class PlanWeekView(View):
             _blocks_to_grid(plan_week.blocks.select_related("category").all(), date_field=True)
         )
         stats = week_stats(plan_week) if plan_week else {}
+        planning_prompt = should_show_planning_prompt(plan_week)
+        review_prompt = should_show_review_prompt(plan_week)
 
         # Training plan banner + suggestions
         active_plan = None
@@ -286,6 +305,8 @@ class PlanWeekView(View):
                 "plan_sessions": plan_sessions,
                 "day_names": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
                 "stats": stats,
+                "planning_prompt": planning_prompt,
+                "review_prompt": review_prompt,
                 "time_zone": settings.TIME_ZONE,
                 "active_plan": active_plan,
                 "current_plan_week": current_plan_week,
@@ -317,6 +338,94 @@ class PlanWeekCurrentView(View):
     def get(self, request):
         monday = _current_or_next_monday()
         return redirect("week-view", start_date=monday.isoformat())
+
+
+class PlanWeekPlanningView(View):
+    def get(self, request, week_pk):
+        week = get_object_or_404(PlanWeek, pk=week_pk)
+        reflection = get_or_create_reflection(week)
+        return render(
+            request,
+            "schedule/partials/planning_modal.html",
+            {
+                "week": week,
+                "reflection_form": PlanningReflectionForm(instance=reflection),
+                "existing_goals": week.goals.all(),
+                "priority_choices": [("high", "High"), ("medium", "Medium"), ("low", "Low")],
+            },
+        )
+
+    def post(self, request, week_pk):
+        week = get_object_or_404(PlanWeek, pk=week_pk)
+        reflection = get_or_create_reflection(week)
+        form = PlanningReflectionForm(request.POST, instance=reflection)
+        goals_data = _planning_goals_from_post(request.POST)
+        if form.is_valid():
+            complete_planning(week, form.cleaned_data, goals_data)
+            response = HttpResponse(status=204)
+            response["HX-Refresh"] = "true"
+            return response
+        return render(
+            request,
+            "schedule/partials/planning_modal.html",
+            {
+                "week": week,
+                "reflection_form": form,
+                "existing_goals": week.goals.all(),
+                "priority_choices": [("high", "High"), ("medium", "Medium"), ("low", "Low")],
+            },
+            status=400,
+        )
+
+
+class PlanWeekReviewView(View):
+    def get(self, request, week_pk):
+        week = get_object_or_404(PlanWeek, pk=week_pk)
+        reflection = get_or_create_reflection(week)
+        goals = week.goals.all()
+        unfinished_goals = goals.exclude(status="done")
+        return render(
+            request,
+            "schedule/partials/review_modal.html",
+            {
+                "week": week,
+                "reflection_form": ReviewReflectionForm(instance=reflection),
+                "goals": goals,
+                "unfinished_goals": unfinished_goals,
+                "stats": week_stats(week),
+                "status_choices": [("planned", "Planned"), ("done", "Done"), ("skipped", "Skipped")],
+            },
+        )
+
+    def post(self, request, week_pk):
+        week = get_object_or_404(PlanWeek, pk=week_pk)
+        reflection = get_or_create_reflection(week)
+        form = ReviewReflectionForm(request.POST, instance=reflection)
+        if form.is_valid():
+            goal_statuses = {
+                int(key.removeprefix("goal_status_")): value
+                for key, value in request.POST.items()
+                if key.startswith("goal_status_")
+            }
+            carryover_goal_ids = [int(pk) for pk in request.POST.getlist("carryover_goals") if pk]
+            complete_review(week, form.cleaned_data, goal_statuses, carryover_goal_ids)
+            response = HttpResponse(status=204)
+            response["HX-Refresh"] = "true"
+            return response
+        goals = week.goals.all()
+        return render(
+            request,
+            "schedule/partials/review_modal.html",
+            {
+                "week": week,
+                "reflection_form": form,
+                "goals": goals,
+                "unfinished_goals": goals.exclude(status="done"),
+                "stats": week_stats(week),
+                "status_choices": [("planned", "Planned"), ("done", "Done"), ("skipped", "Skipped")],
+            },
+            status=400,
+        )
 
 
 # ─── Plan Blocks ─────────────────────────────────────────────────────────────
@@ -550,6 +659,22 @@ class CopyWeekForwardView(View):
 
 
 # ─── Helper ──────────────────────────────────────────────────────────────────
+
+def _planning_goals_from_post(post_data) -> list[dict]:
+    titles = post_data.getlist("goal_title")
+    categories = post_data.getlist("goal_category")
+    priorities = post_data.getlist("goal_priority")
+    notes = post_data.getlist("goal_notes")
+    goals = []
+    for index, title in enumerate(titles):
+        goals.append({
+            "title": title,
+            "category": categories[index] if index < len(categories) else "",
+            "priority": priorities[index] if index < len(priorities) else "medium",
+            "notes": notes[index] if index < len(notes) else "",
+        })
+    return goals
+
 
 def _blocks_to_grid(blocks, date_field: bool) -> list:
     """Serialize blocks to JSON-friendly dicts for the frontend grid."""

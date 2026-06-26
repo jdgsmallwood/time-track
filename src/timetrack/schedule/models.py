@@ -8,6 +8,8 @@ DAY_CHOICES = [
 ]
 
 STATUS_CHOICES = [("draft", "Draft"), ("synced", "Synced")]
+GOAL_PRIORITY_CHOICES = [("low", "Low"), ("medium", "Medium"), ("high", "High")]
+GOAL_STATUS_CHOICES = [("planned", "Planned"), ("done", "Done"), ("skipped", "Skipped")]
 
 
 class TemplateWeek(models.Model):
@@ -75,6 +77,48 @@ class PlanWeek(models.Model):
     def end_date(self):
         from datetime import timedelta
         return self.start_date + timedelta(days=6)
+
+
+class PlanWeekReflection(models.Model):
+    week = models.OneToOneField(PlanWeek, on_delete=models.CASCADE, related_name="reflection")
+    planning_completed_at = models.DateTimeField(null=True, blank=True)
+    review_completed_at = models.DateTimeField(null=True, blank=True)
+    weekly_intention = models.TextField(blank=True)
+    top_priorities = models.TextField(blank=True)
+    wins = models.TextField(blank=True)
+    misses = models.TextField(blank=True)
+    lessons = models.TextField(blank=True)
+    next_week_notes = models.TextField(blank=True)
+    energy_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Reflection for {self.week}"
+
+
+class WeeklyGoal(models.Model):
+    week = models.ForeignKey(PlanWeek, on_delete=models.CASCADE, related_name="goals")
+    title = models.CharField(max_length=200)
+    category = models.CharField(max_length=100, blank=True)
+    priority = models.CharField(max_length=20, choices=GOAL_PRIORITY_CHOICES, default="medium")
+    status = models.CharField(max_length=20, choices=GOAL_STATUS_CHOICES, default="planned")
+    notes = models.TextField(blank=True)
+    source_goal = models.ForeignKey(
+        "self",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="carried_goals",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return self.title
 
 
 class WeeklyTask(models.Model):

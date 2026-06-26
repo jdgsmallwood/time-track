@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import PlanBlock, TemplateBlock, TemplateWeek, WeeklyTask
+from .models import PlanBlock, PlanWeekReflection, TemplateBlock, TemplateWeek, WeeklyGoal, WeeklyTask
 
 
 class TemplateWeekForm(forms.ModelForm):
@@ -47,3 +47,35 @@ class WeeklyTaskForm(forms.ModelForm):
 class CloneTemplateForm(forms.Form):
     template = forms.ModelChoiceField(queryset=TemplateWeek.objects.all())
     replace = forms.BooleanField(required=False, label="Replace existing blocks if week exists")
+
+
+class PlanningReflectionForm(forms.ModelForm):
+    class Meta:
+        model = PlanWeekReflection
+        fields = ["weekly_intention", "top_priorities"]
+        widgets = {
+            "weekly_intention": forms.Textarea(attrs={"rows": 3}),
+            "top_priorities": forms.Textarea(attrs={"rows": 4}),
+        }
+
+
+class WeeklyGoalForm(forms.ModelForm):
+    class Meta:
+        model = WeeklyGoal
+        fields = ["title", "category", "priority", "notes"]
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+
+class ReviewReflectionForm(forms.ModelForm):
+    class Meta:
+        model = PlanWeekReflection
+        fields = ["wins", "misses", "lessons", "next_week_notes", "energy_score"]
+        widgets = {
+            "wins": forms.Textarea(attrs={"rows": 3}),
+            "misses": forms.Textarea(attrs={"rows": 3}),
+            "lessons": forms.Textarea(attrs={"rows": 3}),
+            "next_week_notes": forms.Textarea(attrs={"rows": 3}),
+            "energy_score": forms.NumberInput(attrs={"min": 1, "max": 5}),
+        }

@@ -6,7 +6,12 @@ from django.views import View
 
 from timetrack.core.models import Category
 from timetrack.schedule.models import PlanBlock, PlanWeek, TemplateWeek
-from timetrack.schedule.services import week_monday, week_stats
+from timetrack.schedule.services import (
+    should_show_planning_prompt,
+    should_show_review_prompt,
+    week_monday,
+    week_stats,
+)
 
 
 def healthz(request):
@@ -24,7 +29,7 @@ class DashboardView(View):
             .order_by("start_time")
         )
 
-        this_week = PlanWeek.objects.filter(start_date=monday).first()
+        this_week = PlanWeek.objects.select_related("reflection").filter(start_date=monday).first()
         this_week_stats = week_stats(this_week) if this_week else {}
 
         recent_pks = list(
@@ -75,6 +80,8 @@ class DashboardView(View):
                 "today_blocks": today_blocks,
                 "this_week": this_week,
                 "this_week_stats": this_week_stats,
+                "planning_prompt": should_show_planning_prompt(this_week),
+                "review_prompt": should_show_review_prompt(this_week),
                 "recent_weeks": recent_weeks,
                 "templates": templates,
                 "default_template": default_template,
