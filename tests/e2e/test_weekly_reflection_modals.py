@@ -25,7 +25,6 @@ def test_planning_modal_saves_reflection_and_goals(authenticated_page, live_serv
     expect(page.get_by_role("heading", name="Plan week")).to_be_visible()
 
     page.locator('[name="weekly_intention"]').fill("Keep the week focused")
-    page.locator('[name="top_priorities"]').fill("Ship planning\nProtect training")
 
     goal_titles = page.locator('[name="goal_title"]')
     goal_categories = page.locator('[name="goal_category"]')
@@ -46,7 +45,6 @@ def test_planning_modal_saves_reflection_and_goals(authenticated_page, live_serv
 
     week.refresh_from_db()
     assert week.reflection.weekly_intention == "Keep the week focused"
-    assert week.reflection.top_priorities == "Ship planning\nProtect training"
     assert week.reflection.planning_completed_at is not None
     assert list(week.goals.values_list("title", "category", "priority")) == [
         ("Finish modal flow", "Work", "high"),
@@ -121,3 +119,26 @@ def test_review_modal_updates_goals_and_carries_selected_forward(authenticated_p
 
     expect(page.get_by_role("button", name="Review week")).to_have_count(0)
     expect(page.locator("body")).to_contain_text("Review done")
+
+
+def test_planning_done_badge_reopens_prefilled_modal(authenticated_page, live_server):
+    from django.utils import timezone
+    from timetrack.schedule.models import PlanWeek, PlanWeekReflection, WeeklyGoal
+
+    week = PlanWeek.objects.create(start_date=date(2026, 6, 30))
+    PlanWeekReflection.objects.create(
+        week=week,
+        weekly_intention="Focus on shipping",
+        planning_completed_at=timezone.now(),
+    )
+    WeeklyGoal.objects.create(week=week, title="Ship the feature", priority="high")
+
+    page = authenticated_page
+    page.goto(f"{live_server.url}/schedule/weeks/{week.start_date.isoformat()}/")
+    page.wait_for_selector("#week-grid", state="visible")
+
+    expect(page.get_by_role("button", name="Plan week")).to_have_count(0)
+    page.get_by_role("button", name="Planning done").click()
+    expect(page.get_by_role("heading", name="Plan week")).to_be_visible()
+    expect(page.locator('[name="weekly_intention"]')).to_have_value("Focus on shipping")
+    expect(page.locator('[name="goal_title"]').first).to_have_value("Ship the feature")

@@ -27,12 +27,24 @@
             {% else %}bg-yellow-100 text-yellow-700{% endif %}">
             {{ plan_week.status }}{% if plan_week.source_template %} · {{ plan_week.source_template.name }}{% endif %}
           </span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
-            Planning {% if plan_week.reflection.planning_completed_at %}done{% else %}open{% endif %}
-          </span>
-          <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">
-            Review {% if plan_week.reflection.review_completed_at %}done{% else %}open{% endif %}
-          </span>
+          {% if plan_week.reflection.planning_completed_at %}
+          <button hx-get="{% url 'plan-week-planning' week_pk=plan_week.pk %}"
+                  hx-target="#modal-root" hx-swap="innerHTML"
+                  class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 whitespace-nowrap cursor-pointer">
+            Planning done
+          </button>
+          {% else %}
+          <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">Planning open</span>
+          {% endif %}
+          {% if plan_week.reflection.review_completed_at %}
+          <button hx-get="{% url 'plan-week-review' week_pk=plan_week.pk %}"
+                  hx-target="#modal-root" hx-swap="innerHTML"
+                  class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 hover:bg-green-200 whitespace-nowrap cursor-pointer">
+            Review done
+          </button>
+          {% else %}
+          <span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 whitespace-nowrap">Review open</span>
+          {% endif %}
           {% endif %}
         </div>
         <p class="text-xs text-gray-400 mt-0.5">{{ time_zone }}</p>

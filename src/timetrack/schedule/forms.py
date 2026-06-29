@@ -52,10 +52,9 @@ class CloneTemplateForm(forms.Form):
 class PlanningReflectionForm(forms.ModelForm):
     class Meta:
         model = PlanWeekReflection
-        fields = ["weekly_intention", "top_priorities"]
+        fields = ["weekly_intention"]
         widgets = {
             "weekly_intention": forms.Textarea(attrs={"rows": 3}),
-            "top_priorities": forms.Textarea(attrs={"rows": 4}),
         }
 
 

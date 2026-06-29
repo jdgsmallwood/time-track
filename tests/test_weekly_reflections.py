@@ -116,7 +116,6 @@ def test_planning_post_saves_intention_priorities_and_goals(auth_client, plan_we
         f"/schedule/plan-weeks/{plan_week.pk}/planning/",
         {
             "weekly_intention": "Make progress",
-            "top_priorities": "Build\nRun",
             "goal_title": ["Build modal", "Run intervals"],
             "goal_category": ["Work", "Running"],
             "goal_priority": ["high", "medium"],
@@ -210,3 +209,27 @@ def test_complete_review_does_not_copy_unselected_goals(plan_week):
     next_week = PlanWeek.objects.get(start_date=date(2024, 6, 24))
     assert next_week.goals.filter(source_goal=selected).exists()
     assert not next_week.goals.filter(source_goal=unselected).exists()
+
+
+@pytest.mark.django_db
+def test_week_view_planning_done_badge_has_htmx_link(auth_client, plan_week):
+    from django.utils import timezone
+
+    PlanWeekReflection.objects.create(week=plan_week, planning_completed_at=timezone.now())
+    response = auth_client.get(f"/schedule/weeks/{plan_week.start_date.isoformat()}/")
+    content = response.content.decode()
+    assert response.status_code == 200
+    assert f"/schedule/plan-weeks/{plan_week.pk}/planning/" in content
+    assert "Planning done" in content
+
+
+@pytest.mark.django_db
+def test_week_view_review_done_badge_has_htmx_link(auth_client, plan_week):
+    from django.utils import timezone
+
+    PlanWeekReflection.objects.create(week=plan_week, review_completed_at=timezone.now())
+    response = auth_client.get(f"/schedule/weeks/{plan_week.start_date.isoformat()}/")
+    content = response.content.decode()
+    assert response.status_code == 200
+    assert f"/schedule/plan-weeks/{plan_week.pk}/review/" in content
+    assert "Review done" in content

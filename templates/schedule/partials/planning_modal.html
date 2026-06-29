@@ -24,13 +24,6 @@
       </div>
 
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ reflection_form.top_priorities.id_for_label }}">Top priorities</label>
-        <textarea name="top_priorities" id="{{ reflection_form.top_priorities.id_for_label }}" rows="4"
-                  class="form-input w-full text-sm">{{ reflection_form.top_priorities.value|default_if_none:"" }}</textarea>
-        {% if reflection_form.top_priorities.errors %}<div class="text-xs text-red-600 mt-1">{{ reflection_form.top_priorities.errors }}</div>{% endif %}
-      </div>
-
-      <div>
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-sm font-semibold text-gray-900">Goals</h3>
           <button type="button"
