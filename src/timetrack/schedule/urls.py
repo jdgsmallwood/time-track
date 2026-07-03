@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     CopyWeekForwardView,
+    DailyCheckInView,
     PlanBlockCreateView,
     PlanBlockUpdateView,
     PlanWeekCurrentView,
@@ -39,6 +40,8 @@ urlpatterns = [
     path("plan-weeks/<int:week_pk>/push/", PushToGCalView.as_view(), name="push-gcal"),
     path("plan-weeks/<int:week_pk>/copy-forward/", CopyWeekForwardView.as_view(), name="copy-week-forward"),
     path("history/", PlanWeekHistoryView.as_view(), name="week-history"),
+    # Daily check-in
+    path("days/<str:checkin_date>/check-in/", DailyCheckInView.as_view(), name="daily-checkin"),
     # Weekly tasks
     path("weekly-tasks/", WeeklyTaskListView.as_view(), name="weekly-tasks"),
     path("weekly-tasks/<int:pk>/delete/", WeeklyTaskDeleteView.as_view(), name="weekly-task-delete"),

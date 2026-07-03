@@ -150,6 +150,31 @@ class WeeklyTask(models.Model):
         return self.category.icon if self.category else ""
 
 
+class DailyCheckIn(models.Model):
+    date = models.DateField(unique=True)
+    intention = models.TextField(blank=True)
+    general_aims = models.TextField(blank=True)
+    energy_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Check-in {self.date}"
+
+
+class DailyGoalProgress(models.Model):
+    check_in = models.ForeignKey(DailyCheckIn, on_delete=models.CASCADE, related_name="goal_progress")
+    goal = models.ForeignKey(WeeklyGoal, on_delete=models.CASCADE, related_name="daily_progress")
+    plan = models.TextField(blank=True)
+
+    class Meta:
+        unique_together = [("check_in", "goal")]
+
+    def __str__(self):
+        return f"{self.check_in.date} / {self.goal.title}"
+
+
 class PlanBlock(models.Model):
     week = models.ForeignKey(PlanWeek, on_delete=models.CASCADE, related_name="blocks")
     date = models.DateField()

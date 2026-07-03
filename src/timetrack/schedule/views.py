@@ -11,6 +11,7 @@ from timetrack.plugins.registry import get_registry
 
 from .forms import (
     CloneTemplateForm,
+    DailyCheckInForm,
     PlanningReflectionForm,
     PlanBlockForm,
     ReviewReflectionForm,
@@ -18,7 +19,7 @@ from .forms import (
     TemplateWeekForm,
     WeeklyTaskForm,
 )
-from .models import PlanBlock, PlanWeek, TemplateBlock, TemplateWeek, WeeklyTask
+from .models import DailyCheckIn, DailyGoalProgress, PlanBlock, PlanWeek, TemplateBlock, TemplateWeek, WeeklyTask
 from .services import (
     clone_template_to_week,
     complete_planning,
@@ -290,6 +291,10 @@ class PlanWeekView(View):
         _exercise_cat = _Cat.objects.filter(name="Exercise").first()
         exercise_category_pk = _exercise_cat.pk if _exercise_cat else ""
 
+        _checkins = list(DailyCheckIn.objects.filter(date__in=days))
+        checkin_dates = {ci.date for ci in _checkins}
+        completed_checkin_dates = {ci.date for ci in _checkins if ci.completed_at}
+
         return render(
             request,
             "schedule/week_view.html",
@@ -319,6 +324,8 @@ class PlanWeekView(View):
                 "plan_estimated_minutes": plan_estimated_minutes,
                 "strava_connected": strava_connected,
                 "today_day_index": today_day_index,
+                "checkin_dates": checkin_dates,
+                "completed_checkin_dates": completed_checkin_dates,
             },
         )
 
@@ -429,6 +436,71 @@ class PlanWeekReviewView(View):
                 "stats": week_stats(week),
                 "status_choices": [("planned", "Planned"), ("done", "Done"), ("skipped", "Skipped")],
             },
+            status=400,
+        )
+
+
+# ─── Daily Check-in ──────────────────────────────────────────────────────────
+
+class DailyCheckInView(View):
+    def _get_context(self, checkin_date: date, check_in, form):
+        plan_week = PlanWeek.objects.filter(
+            start_date__lte=checkin_date,
+            start_date__gt=checkin_date - timedelta(days=7),
+        ).first()
+        goals = list(plan_week.goals.exclude(status="skipped").order_by("created_at")) if plan_week else []
+        existing_progress = {}
+        if check_in and check_in.pk:
+            existing_progress = {
+                p.goal_id: p.plan
+                for p in check_in.goal_progress.all()
+            }
+        goals_with_progress = [(goal, existing_progress.get(goal.pk, "")) for goal in goals]
+        return {
+            "checkin_date": checkin_date,
+            "check_in": check_in,
+            "form": form,
+            "goals_with_progress": goals_with_progress,
+        }
+
+    def get(self, request, checkin_date: str):
+        d = date.fromisoformat(checkin_date)
+        check_in = DailyCheckIn.objects.filter(date=d).first()
+        form = DailyCheckInForm(instance=check_in)
+        return render(
+            request,
+            "schedule/partials/daily_checkin_modal.html",
+            self._get_context(d, check_in, form),
+        )
+
+    def post(self, request, checkin_date: str):
+        from django.utils import timezone as tz
+        d = date.fromisoformat(checkin_date)
+        check_in, _created = DailyCheckIn.objects.get_or_create(date=d)
+        form = DailyCheckInForm(request.POST, instance=check_in)
+        if form.is_valid():
+            check_in = form.save(commit=False)
+            check_in.completed_at = tz.now()
+            check_in.save()
+            for key, value in request.POST.items():
+                if key.startswith("goal_progress_"):
+                    goal_pk_str = key.removeprefix("goal_progress_")
+                    try:
+                        goal_pk = int(goal_pk_str)
+                        DailyGoalProgress.objects.update_or_create(
+                            check_in=check_in,
+                            goal_id=goal_pk,
+                            defaults={"plan": value.strip()},
+                        )
+                    except (ValueError, Exception):
+                        pass
+            response = HttpResponse(status=204)
+            response["HX-Refresh"] = "true"
+            return response
+        return render(
+            request,
+            "schedule/partials/daily_checkin_modal.html",
+            self._get_context(d, check_in, form),
             status=400,
         )
 

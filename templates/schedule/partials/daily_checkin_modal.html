@@ -1,0 +1,78 @@
+<div class="fixed inset-0 z-50 bg-gray-900/50 flex items-start justify-center p-4 overflow-y-auto">
+  <div class="bg-white border border-gray-200 rounded-xl shadow-2xl w-full max-w-2xl mt-10">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+      <div>
+        <h2 class="font-semibold text-gray-900">Daily check-in</h2>
+        <p class="text-xs text-gray-500">{{ checkin_date|date:"l j F Y" }}</p>
+      </div>
+      <button type="button"
+              onclick="document.getElementById('modal-root').innerHTML = ''"
+              class="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+    </div>
+
+    <form hx-post="{% url 'daily-checkin' checkin_date=checkin_date|date:'Y-m-d' %}"
+          hx-target="#modal-root"
+          hx-swap="innerHTML"
+          class="p-5 space-y-5">
+      {% csrf_token %}
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.intention.id_for_label }}">Daily intention</label>
+        <textarea name="intention" id="{{ form.intention.id_for_label }}" rows="2"
+                  placeholder="What's your theme or focus for today?"
+                  class="form-input w-full text-sm">{{ form.intention.value|default_if_none:"" }}</textarea>
+      </div>
+
+      {% if goals_with_progress %}
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-2">Weekly goals — how will you make progress today?</h3>
+        <div class="space-y-3">
+          {% for goal, progress in goals_with_progress %}
+          <div class="border border-gray-100 rounded-lg p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-sm font-medium text-gray-800">{{ goal.title }}</span>
+              <span class="text-xs px-1.5 py-0.5 rounded-full
+                {% if goal.priority == 'high' %}bg-red-100 text-red-700
+                {% elif goal.priority == 'medium' %}bg-yellow-100 text-yellow-700
+                {% else %}bg-gray-100 text-gray-600{% endif %}">
+                {{ goal.priority }}
+              </span>
+              {% if goal.status == 'done' %}
+              <span class="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700">done</span>
+              {% endif %}
+            </div>
+            <textarea name="goal_progress_{{ goal.pk }}"
+                      rows="2"
+                      placeholder="How will you make progress on this today?"
+                      class="form-input w-full text-sm">{{ progress }}</textarea>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.general_aims.id_for_label }}">Other aims for today</label>
+        <textarea name="general_aims" id="{{ form.general_aims.id_for_label }}" rows="3"
+                  placeholder="Anything else you want to get done today…"
+                  class="form-input w-full text-sm">{{ form.general_aims.value|default_if_none:"" }}</textarea>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.energy_score.id_for_label }}">Energy today (1–5)</label>
+        <input type="number" name="energy_score" id="{{ form.energy_score.id_for_label }}"
+               min="1" max="5" value="{{ form.energy_score.value|default_if_none:'' }}"
+               class="form-input w-24 text-sm">
+      </div>
+
+      {% if form.errors %}
+      <div class="text-xs text-red-600">Please fix the errors above.</div>
+      {% endif %}
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+        <button type="button" onclick="document.getElementById('modal-root').innerHTML = ''" class="btn-outline text-sm">Cancel</button>
+        <button type="submit" class="btn-indigo text-sm">Save check-in</button>
+      </div>
+    </form>
+  </div>
+</div>

@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import PlanBlock, PlanWeekReflection, TemplateBlock, TemplateWeek, WeeklyGoal, WeeklyTask
+from .models import DailyCheckIn, PlanBlock, PlanWeekReflection, TemplateBlock, TemplateWeek, WeeklyGoal, WeeklyTask
 
 
 class TemplateWeekForm(forms.ModelForm):
@@ -76,5 +76,16 @@ class ReviewReflectionForm(forms.ModelForm):
             "misses": forms.Textarea(attrs={"rows": 3}),
             "lessons": forms.Textarea(attrs={"rows": 3}),
             "next_week_notes": forms.Textarea(attrs={"rows": 3}),
+            "energy_score": forms.NumberInput(attrs={"min": 1, "max": 5}),
+        }
+
+
+class DailyCheckInForm(forms.ModelForm):
+    class Meta:
+        model = DailyCheckIn
+        fields = ["intention", "general_aims", "energy_score"]
+        widgets = {
+            "intention": forms.Textarea(attrs={"rows": 2}),
+            "general_aims": forms.Textarea(attrs={"rows": 3}),
             "energy_score": forms.NumberInput(attrs={"min": 1, "max": 5}),
         }
