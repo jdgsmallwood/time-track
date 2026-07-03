@@ -156,6 +156,11 @@ class DailyCheckIn(models.Model):
     general_aims = models.TextField(blank=True)
     energy_score = models.PositiveSmallIntegerField(null=True, blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)
+    # Evening recap fields
+    recap_wins = models.TextField(blank=True)
+    recap_misses = models.TextField(blank=True)
+    recap_energy_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    recap_completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -167,6 +172,7 @@ class DailyGoalProgress(models.Model):
     check_in = models.ForeignKey(DailyCheckIn, on_delete=models.CASCADE, related_name="goal_progress")
     goal = models.ForeignKey(WeeklyGoal, on_delete=models.CASCADE, related_name="daily_progress")
     plan = models.TextField(blank=True)
+    actual = models.TextField(blank=True)
 
     class Meta:
         unique_together = [("check_in", "goal")]

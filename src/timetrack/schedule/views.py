@@ -12,6 +12,7 @@ from timetrack.plugins.registry import get_registry
 from .forms import (
     CloneTemplateForm,
     DailyCheckInForm,
+    DailyRecapForm,
     PlanningReflectionForm,
     PlanBlockForm,
     ReviewReflectionForm,
@@ -294,6 +295,7 @@ class PlanWeekView(View):
         _checkins = list(DailyCheckIn.objects.filter(date__in=days))
         checkin_dates = {ci.date for ci in _checkins}
         completed_checkin_dates = {ci.date for ci in _checkins if ci.completed_at}
+        completed_recap_dates = {ci.date for ci in _checkins if ci.recap_completed_at}
 
         return render(
             request,
@@ -326,6 +328,7 @@ class PlanWeekView(View):
                 "today_day_index": today_day_index,
                 "checkin_dates": checkin_dates,
                 "completed_checkin_dates": completed_checkin_dates,
+                "completed_recap_dates": completed_recap_dates,
             },
         )
 
@@ -500,6 +503,72 @@ class DailyCheckInView(View):
         return render(
             request,
             "schedule/partials/daily_checkin_modal.html",
+            self._get_context(d, check_in, form),
+            status=400,
+        )
+
+
+class DailyRecapView(View):
+    def _get_context(self, checkin_date: date, check_in, form):
+        plan_week = PlanWeek.objects.filter(
+            start_date__lte=checkin_date,
+            start_date__gt=checkin_date - timedelta(days=7),
+        ).first()
+        goals = list(plan_week.goals.exclude(status="skipped").order_by("created_at")) if plan_week else []
+        existing_progress = {}
+        if check_in and check_in.pk:
+            existing_progress = {
+                p.goal_id: (p.plan, p.actual)
+                for p in check_in.goal_progress.all()
+            }
+        goals_with_progress = [
+            (goal, existing_progress.get(goal.pk, ("", ""))[0], existing_progress.get(goal.pk, ("", ""))[1])
+            for goal in goals
+        ]
+        return {
+            "checkin_date": checkin_date,
+            "check_in": check_in,
+            "form": form,
+            "goals_with_progress": goals_with_progress,
+        }
+
+    def get(self, request, checkin_date: str):
+        d = date.fromisoformat(checkin_date)
+        check_in = DailyCheckIn.objects.filter(date=d).first()
+        form = DailyRecapForm(instance=check_in)
+        return render(
+            request,
+            "schedule/partials/daily_recap_modal.html",
+            self._get_context(d, check_in, form),
+        )
+
+    def post(self, request, checkin_date: str):
+        from django.utils import timezone as tz
+        d = date.fromisoformat(checkin_date)
+        check_in, _created = DailyCheckIn.objects.get_or_create(date=d)
+        form = DailyRecapForm(request.POST, instance=check_in)
+        if form.is_valid():
+            check_in = form.save(commit=False)
+            check_in.recap_completed_at = tz.now()
+            check_in.save()
+            for key, value in request.POST.items():
+                if key.startswith("goal_actual_"):
+                    goal_pk_str = key.removeprefix("goal_actual_")
+                    try:
+                        goal_pk = int(goal_pk_str)
+                        DailyGoalProgress.objects.update_or_create(
+                            check_in=check_in,
+                            goal_id=goal_pk,
+                            defaults={"actual": value.strip()},
+                        )
+                    except (ValueError, Exception):
+                        pass
+            response = HttpResponse(status=204)
+            response["HX-Refresh"] = "true"
+            return response
+        return render(
+            request,
+            "schedule/partials/daily_recap_modal.html",
             self._get_context(d, check_in, form),
             status=400,
         )
