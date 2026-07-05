@@ -7,8 +7,12 @@
     showNewBlockForm: false,
     showCopyForm: false,
     showStats: false,
-    activeDay: {{ today_day_index }},
-    days: {{ days|length }}
+    activeDay: (() => { const v = sessionStorage.getItem('activeDayAfterCreate'); if (v !== null) { sessionStorage.removeItem('activeDayAfterCreate'); return parseInt(v, 10); } return {{ today_day_index }}; })(),
+    days: {{ days|length }},
+    blockStart: '09:00',
+    blockEnd: '10:00',
+    endModified: false,
+    syncEndTime() { if (!this.endModified) { const [h, m] = this.blockStart.split(':').map(Number); const e = h * 60 + m + 60; this.blockEnd = String(Math.floor(e / 60)).padStart(2, '0') + ':' + String(e % 60).padStart(2, '0'); } }
   }">
 
   {# ── Header ── #}
@@ -71,7 +75,7 @@
       <button @click="showStats = !showStats"
         class="btn-ghost text-xs">📊 Stats</button>
       {% endif %}
-      <button @click="showNewBlockForm = !showNewBlockForm"
+      <button @click="showNewBlockForm = !showNewBlockForm; if (showNewBlockForm) { blockStart = '09:00'; blockEnd = '10:00'; endModified = false; }"
         class="btn-indigo text-xs">+ Block</button>
       {% if not plan_week %}
       <button @click="showCloneForm = !showCloneForm"
@@ -170,7 +174,7 @@
     <h3 class="font-medium text-indigo-900 mb-3 text-sm">New Block</h3>
     <form hx-post="/schedule/plan-weeks/{{ plan_week.pk }}/blocks/"
           hx-target="body" hx-swap="none"
-          @htmx:after-request="showNewBlockForm = false; window.location.reload()"
+          @htmx:after-request="showNewBlockForm = false; const _sel = $el.querySelector('[name=date]'); if (_sel) sessionStorage.setItem('activeDayAfterCreate', _sel.selectedIndex); window.location.reload()"
           class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
       {% csrf_token %}
       <div class="col-span-2 sm:col-span-1">
@@ -187,11 +191,11 @@
       </div>
       <div>
         <label class="text-xs text-indigo-700 font-medium">Start</label>
-        <input type="time" name="start_time" value="09:00" class="form-input w-full text-sm mt-1">
+        <input type="time" name="start_time" x-model="blockStart" @change="syncEndTime()" class="form-input w-full text-sm mt-1">
       </div>
       <div>
         <label class="text-xs text-indigo-700 font-medium">End</label>
-        <input type="time" name="end_time" value="10:00" class="form-input w-full text-sm mt-1">
+        <input type="time" name="end_time" x-model="blockEnd" @change="endModified = true" class="form-input w-full text-sm mt-1">
       </div>
       <div>
         <label class="text-xs text-indigo-700 font-medium">Category</label>
