@@ -181,15 +181,16 @@ const GRID = (() => {
         margin: 8,
         listeners: {
           move(event) {
-            const gridTop = gridEl.getBoundingClientRect().top;
             if (event.edges && event.edges.top) {
               // Top edge: snap start time, hold end time fixed.
-              // Snapping the absolute height via interact's snapSize can push the top
-              // downward when the initial height isn't a 15-min multiple, making the
-              // block shorter instead of taller. Snap here instead.
-              const rawTopPx = Math.max(0, event.rect.top - gridTop);
-              const rawStart = START_HOUR * 60 + rawTopPx / SLOT_PX;
+              // Derive the new start from the (scroll-invariant) rect height rather
+              // than event.rect.top. interact.js reports rect.top in page coords while
+              // gridEl.getBoundingClientRect() is viewport-relative, so once the page
+              // is scrolled the two disagree by the scroll offset — which pushed the
+              // top edge far down and collapsed the block to its minimum at end_time.
+              // rect.height is a difference of top/bottom, so it is unaffected by scroll.
               const endMins = minutesSinceMidnight(block.end_time);
+              const rawStart = endMins - event.rect.height / SLOT_PX;
               const snappedStart = Math.max(
                 START_HOUR * 60,
                 Math.min(endMins - SNAP_MINUTES, snapToGrid(rawStart))

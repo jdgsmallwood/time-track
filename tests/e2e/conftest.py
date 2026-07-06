@@ -54,6 +54,25 @@ def plan_week_with_block(plan_week):
 
 
 @pytest.fixture
+def plan_week_with_afternoon_block(plan_week):
+    """Block late enough in the day that the grid must be scrolled to reach it.
+
+    Used to guard against the top-edge resize collapsing when the page is
+    scrolled (interact.js reports rect.top in page coords, but the old code
+    subtracted a viewport-relative grid origin).
+    """
+    from timetrack.schedule.models import PlanBlock
+    block = PlanBlock.objects.create(
+        week=plan_week,
+        title="Afternoon block",
+        date=_monday(),
+        start_time=time(18, 0),
+        end_time=time(19, 0),
+    )
+    return plan_week, block
+
+
+@pytest.fixture
 def plan_week_with_odd_block(plan_week):
     """Block with a 35-min duration — not a multiple of SNAP_MINUTES (15 min)."""
     from timetrack.schedule.models import PlanBlock
@@ -109,6 +128,23 @@ def week_page_with_block(authenticated_page, week_url, plan_week_with_block):
     plan_week, block = plan_week_with_block
     authenticated_page.goto(week_url)
     # Wait for the specific block chip to be rendered by grid.js
+    authenticated_page.wait_for_selector(f'#block-{block.pk}', state='visible')
+    authenticated_page.wait_for_function(
+        "typeof GRID !== 'undefined' && typeof GRID.updateBlock === 'function'"
+    )
+    return authenticated_page, block
+
+
+@pytest.fixture
+def week_page_with_afternoon_block(authenticated_page, week_url, plan_week_with_afternoon_block):
+    """Week page (short viewport) pre-loaded with a block low on the grid.
+
+    The viewport is deliberately short so the block sits below the fold and the
+    page must be scrolled to interact with it.
+    """
+    plan_week, block = plan_week_with_afternoon_block
+    authenticated_page.set_viewport_size({"width": 1000, "height": 600})
+    authenticated_page.goto(week_url)
     authenticated_page.wait_for_selector(f'#block-{block.pk}', state='visible')
     authenticated_page.wait_for_function(
         "typeof GRID !== 'undefined' && typeof GRID.updateBlock === 'function'"

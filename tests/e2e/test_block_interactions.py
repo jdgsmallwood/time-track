@@ -312,6 +312,75 @@ def test_resize_top_extends_not_shrinks_odd_duration(week_page_with_odd_block):
     )
 
 
+# ── block resize — top edge while the page is scrolled ────────────────────────
+
+def test_resize_top_extends_when_page_scrolled(week_page_with_afternoon_block):
+    """Top-edge drag up must extend a block even when the grid is scrolled.
+
+    Regression: the move handler derived the new top from
+    ``event.rect.top - gridEl.getBoundingClientRect().top``. interact.js reports
+    ``rect.top`` in page coordinates while ``getBoundingClientRect`` is
+    viewport-relative, so once the page was scrolled the two disagreed by the
+    scroll offset. That inflated the computed start past ``end_time``, collapsing
+    the block to its 15-minute minimum pinned at the end time instead of dragging
+    up nicely. The fix derives the start from the scroll-invariant rect height.
+    """
+    page, block = week_page_with_afternoon_block
+
+    # Bring the block into view — this scrolls the page, which is what triggered
+    # the bug. Confirm we actually scrolled so the test can't silently pass.
+    page.locator(f'#block-{block.pk}').scroll_into_view_if_needed()
+    page.wait_for_timeout(100)
+    assert page.evaluate("window.scrollY") > 0, "test setup: page did not scroll"
+
+    bb = page.locator(f'#block-{block.pk}').bounding_box()
+    original_height = bb['height']
+    edge_x = bb['x'] + bb['width'] / 2
+    edge_y = bb['y'] + 4  # just inside the top resize zone
+
+    # Drag up 60 px = 30 min earlier: 18:00 → 17:30.
+    drag(page, edge_x, edge_y, edge_x, edge_y - 60)
+    page.wait_for_timeout(300)
+
+    chip = page.locator(f'#block-{block.pk}')
+    text = chip.inner_text()
+    # Start must move earlier (17:xx), NOT collapse to 18:45 at the end.
+    assert re.search(r'17:', text), (
+        f"Expected an earlier start (17:xx) after scrolled top-edge drag; "
+        f"got {text!r} — block likely collapsed to its minimum at end_time"
+    )
+    # And it must have grown taller, not shrunk to the minimum.
+    new_height = chip.bounding_box()['height']
+    assert new_height > original_height, (
+        f"Block shrank instead of growing: {original_height} -> {new_height}"
+    )
+
+
+def test_resize_top_scrolled_persists_after_reload(week_page_with_afternoon_block):
+    """The scrolled top-edge resize also persists to the server."""
+    page, block = week_page_with_afternoon_block
+
+    page.locator(f'#block-{block.pk}').scroll_into_view_if_needed()
+    page.wait_for_timeout(100)
+
+    bb = page.locator(f'#block-{block.pk}').bounding_box()
+    edge_x = bb['x'] + bb['width'] / 2
+    edge_y = bb['y'] + 4
+
+    with page.expect_response(
+        lambda r: f'/schedule/plan-blocks/{block.pk}/' in r.url and r.request.method == 'PATCH'
+    ):
+        drag(page, edge_x, edge_y, edge_x, edge_y - 60)
+
+    page.reload()
+    page.wait_for_selector(f'#block-{block.pk}', state='visible')
+
+    text = page.locator(f'#block-{block.pk}').inner_text()
+    assert re.search(r'17:', text), (
+        f"Expected earlier start time after reload; got {text!r}"
+    )
+
+
 # ── category in create popover ────────────────────────────────────────────────
 
 def test_category_dropdown_present_when_categories_exist(week_page_with_category):
