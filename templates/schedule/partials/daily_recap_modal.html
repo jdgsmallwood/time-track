@@ -73,6 +73,13 @@
                class="form-input w-24 text-sm">
       </div>
 
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1" for="{{ form.notes_for_tomorrow.id_for_label }}">Notes for tomorrow</label>
+        <textarea name="notes_for_tomorrow" id="{{ form.notes_for_tomorrow.id_for_label }}" rows="3"
+                  placeholder="What should tomorrow-you pick up, remember, or watch out for?"
+                  class="form-input w-full text-sm">{{ form.notes_for_tomorrow.value|default_if_none:"" }}</textarea>
+      </div>
+
       {% if form.errors %}
       <div class="text-xs text-red-600">Please fix the errors above.</div>
       {% endif %}

@@ -160,6 +160,7 @@ class DailyCheckIn(models.Model):
     recap_wins = models.TextField(blank=True)
     recap_misses = models.TextField(blank=True)
     recap_energy_score = models.PositiveSmallIntegerField(null=True, blank=True)
+    notes_for_tomorrow = models.TextField(blank=True)
     recap_completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -459,11 +459,16 @@ class DailyCheckInView(View):
                 for p in check_in.goal_progress.all()
             }
         goals_with_progress = [(goal, existing_progress.get(goal.pk, "")) for goal in goals]
+        # Monday shows Friday's notes, other days show yesterday's
+        prev_date = checkin_date - timedelta(days=3 if checkin_date.weekday() == 0 else 1)
+        previous = DailyCheckIn.objects.filter(date=prev_date).exclude(notes_for_tomorrow="").first()
         return {
             "checkin_date": checkin_date,
             "check_in": check_in,
             "form": form,
             "goals_with_progress": goals_with_progress,
+            "previous_notes": previous.notes_for_tomorrow if previous else "",
+            "previous_notes_date": prev_date,
         }
 
     def get(self, request, checkin_date: str):

@@ -281,3 +281,24 @@ def test_week_view_shows_completed_recap_indicator(auth_client, plan_week):
     DailyCheckIn.objects.create(date=date(2024, 6, 17), recap_completed_at=timezone.now())
     response = auth_client.get(f"/schedule/weeks/{plan_week.start_date.isoformat()}/")
     assert "★" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_checkin_shows_previous_day_notes(auth_client):
+    DailyCheckIn.objects.create(date=date(2024, 6, 18), notes_for_tomorrow="Call the plumber")
+    response = auth_client.get("/schedule/days/2024-06-19/check-in/")
+    assert "Call the plumber" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_monday_checkin_shows_friday_notes(auth_client):
+    # 2024-06-21 is a Friday, 2024-06-24 the following Monday
+    DailyCheckIn.objects.create(date=date(2024, 6, 21), notes_for_tomorrow="Finish the report")
+    response = auth_client.get("/schedule/days/2024-06-24/check-in/")
+    assert "Finish the report" in response.content.decode()
+
+
+@pytest.mark.django_db
+def test_recap_post_saves_notes_for_tomorrow(auth_client):
+    auth_client.post("/schedule/days/2024-06-18/recap/", {"recap_wins": "", "recap_misses": "", "notes_for_tomorrow": "Book the flights"})
+    assert DailyCheckIn.objects.get(date=date(2024, 6, 18)).notes_for_tomorrow == "Book the flights"

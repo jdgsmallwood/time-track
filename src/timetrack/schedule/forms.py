@@ -94,9 +94,10 @@ class DailyCheckInForm(forms.ModelForm):
 class DailyRecapForm(forms.ModelForm):
     class Meta:
         model = DailyCheckIn
-        fields = ["recap_wins", "recap_misses", "recap_energy_score"]
+        fields = ["recap_wins", "recap_misses", "recap_energy_score", "notes_for_tomorrow"]
         widgets = {
             "recap_wins": forms.Textarea(attrs={"rows": 3}),
             "recap_misses": forms.Textarea(attrs={"rows": 3}),
+            "notes_for_tomorrow": forms.Textarea(attrs={"rows": 3}),
             "recap_energy_score": forms.NumberInput(attrs={"min": 1, "max": 5}),
         }
