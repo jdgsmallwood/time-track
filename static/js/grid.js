@@ -93,6 +93,10 @@ const GRID = (() => {
     el.addEventListener('click', (e) => {
       if (isDragging) return; // drag-end fires click in some browsers; ignore it
       e.stopPropagation();
+      if (e.target.closest('.minutes-btn')) {
+        openMinutesModal(block.id);
+        return;
+      }
       openEditPanel(block.id);
     });
 
@@ -238,6 +242,7 @@ const GRID = (() => {
       <div class="font-semibold text-xs leading-tight truncate px-2 pt-1">${block.title}</div>
       ${dur > 30 ? `<div class="block-time text-xs opacity-80 px-2">${block.start_time}–${block.end_time}</div>` : ''}
       ${block.plugin_slug ? `<div class="text-xs opacity-70 px-2">${block.plugin_slug}</div>` : ''}
+      ${block.plugin_slug === 'meeting' && !IS_TEMPLATE ? `<button type="button" class="minutes-btn absolute top-0.5 right-0.5 text-xs leading-none w-5 h-5 rounded bg-white/25 hover:bg-white/45" title="Take minutes">📝</button>` : ''}
     `;
   }
 
@@ -289,6 +294,11 @@ const GRID = (() => {
     } catch (e) {
       console.error('Failed to update block:', e);
     }
+  }
+
+  function openMinutesModal(blockId) {
+    const url = `${MEETING_NOTES_URL_TPL}${blockId}/minutes/`;
+    htmx.ajax('GET', url, { target: '#modal-root', swap: 'innerHTML' });
   }
 
   function openEditPanel(blockId) {

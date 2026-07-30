@@ -282,6 +282,13 @@
           {% if block.plugin_slug == "practice" %}{% with s=block.practice_session %}{% if s %}
           <div class="text-xs text-purple-700 mt-1">🎵 {{ s.instrument|default:"Practice" }} · {{ s.get_focus_display }}</div>
           {% endif %}{% endwith %}{% endif %}
+          {% if block.plugin_slug == "meeting" %}
+          <button type="button"
+                  hx-get="{% url 'meeting-notes' block_pk=block.pk %}"
+                  hx-target="#modal-root" hx-swap="innerHTML"
+                  onclick="event.stopPropagation()"
+                  class="text-xs text-sky-700 mt-1 hover:underline">📝 Minutes</button>
+          {% endif %}
         </div>
         {% endif %}
         {% endfor %}
@@ -478,6 +485,7 @@ const BLOCK_CREATE_URL = '';
 const WEEK_START_DATE = '';
 {% endif %}
 const BLOCK_UPDATE_URL_TPL = '/schedule/plan-blocks/';
+const MEETING_NOTES_URL_TPL = '/meetings/blocks/';
 </script>
 {% load static %}<script src="{% static 'js/grid.js' %}" defer></script>
 {% endblock %}

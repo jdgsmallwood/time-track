@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "timetrack.plugins",
     "timetrack.plugins.running",
     "timetrack.plugins.practice",
+    "timetrack.plugins.meeting",
 ]
 
 MIDDLEWARE = [
