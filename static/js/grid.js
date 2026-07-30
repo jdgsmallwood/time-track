@@ -443,6 +443,7 @@ const GRID = (() => {
     pop.style.cssText = `position:absolute; top:${topPx}px; left:${leftPx}px; width:${popWidth}px; z-index:200;`;
     const preCategoryPk = prefill.categoryPk != null ? String(prefill.categoryPk) : String(lastCategoryPk);
     const preTitle = (prefill.title || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    const prePluginSlug = prefill.pluginSlug || '';
     pop.innerHTML = `
       <div style="background:#fff; border:1px solid #6366f1; border-radius:8px; box-shadow:0 4px 16px rgba(0,0,0,.12); padding:10px;">
         <div style="font-size:11px; color:#6366f1; font-weight:600; margin-bottom:6px;">${dayName} · ${startStr}–${endStr}</div>
@@ -453,6 +454,12 @@ const GRID = (() => {
                 style="display:block; width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 8px; font-size:13px; margin-bottom:6px; background:#fff; color:#374151;">
           <option value="">— no category —</option>
           ${CATEGORIES.map(c => `<option value="${c.pk}" ${String(c.pk) === preCategoryPk ? 'selected' : ''}>${c.icon ? c.icon + ' ' : ''}${c.name}</option>`).join('')}
+        </select>` : ''}
+        ${(typeof PLUGINS !== 'undefined' && PLUGINS.length) ? `
+        <select id="create-popover-plugin"
+                style="display:block; width:100%; box-sizing:border-box; border:1px solid #d1d5db; border-radius:6px; padding:5px 8px; font-size:13px; margin-bottom:6px; background:#fff; color:#374151;">
+          <option value="">— no plugin —</option>
+          ${PLUGINS.map(p => `<option value="${p.slug}" ${p.slug === prePluginSlug ? 'selected' : ''}>${p.icon ? p.icon + ' ' : ''}${p.name}</option>`).join('')}
         </select>` : ''}
         <div style="display:flex; gap:6px;">
           <button id="create-popover-save"
@@ -479,6 +486,8 @@ const GRID = (() => {
 
       const body = { title, start_time: startStr, end_time: endStr };
       if (catEl && catEl.value) body.category = catEl.value;
+      const plugEl = pop.querySelector('#create-popover-plugin');
+      if (plugEl && plugEl.value) body.plugin_slug = plugEl.value;
       if (prefill.weeklyTaskPk) body.weekly_task = prefill.weeklyTaskPk;
       if (prefill.planSessionId) body.training_plan_session_id = prefill.planSessionId;
       if (prefill.practiceGoalId) body.practice_goal_id = prefill.practiceGoalId;
@@ -672,7 +681,8 @@ const GRID = (() => {
               gridRect.left + 56 + 4, gridRect.top + topForTime('09:00'),
               { title: sd.task.title, categoryPk: sd.task.categoryPk,
                 weeklyTaskPk: sd.task.pk, planSessionId: sd.task.planSessionId,
-                practiceGoalId: sd.task.practiceGoalId }
+                practiceGoalId: sd.task.practiceGoalId,
+                pluginSlug: sd.task.pluginSlug }
             );
           }
         }

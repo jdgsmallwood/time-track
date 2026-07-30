@@ -474,6 +474,7 @@
 const GRID_DATA = {{ grid_data|safe }};
 const CATEGORIES = [{% for cat in categories %}{"pk":{{ cat.pk }},"name":"{{ cat.name|escapejs }}","color":"{{ cat.color }}","icon":"{{ cat.icon|default:''|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
 const WEEKLY_TASKS = [{% for task in weekly_tasks %}{"pk":{{ task.pk }},"title":"{{ task.title|escapejs }}","durationMins":{{ task.duration_minutes }},"color":"{{ task.color }}","categoryPk":"{{ task.category_id|default:'' }}","recurrenceCount":{{ task.recurrence_count }},"scheduledCount":{{ task.scheduled_count }}}{% if not forloop.last %},{% endif %}{% endfor %}];
+const PLUGINS = [{% for p in plugins %}{"slug":"{{ p.slug|escapejs }}","name":"{{ p.name|escapejs }}","icon":"{{ p.icon|default:''|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}];
 const IS_TEMPLATE = false;
 {% if plan_week %}
 const OWNER_PK = {{ plan_week.pk }};

@@ -131,3 +131,19 @@ def test_copy_plan_block_forward_carries_no_minutes(plan_block):
     )
     MeetingPlugin().clone_plan_block_data(plan_block, dest)
     assert not MeetingNotes.objects.filter(plan_block=dest).exists()
+
+
+@pytest.mark.django_db
+def test_grid_create_with_meeting_plugin_inits_notes(auth_client):
+    """Popover/drag create posts plugin_slug; server must init the notes row."""
+    week = PlanWeek.objects.create(start_date=date(2026, 7, 6))
+    response = auth_client.post(
+        reverse("plan-block-create", kwargs={"week_pk": week.pk}),
+        data='{"title": "Standup", "date": "2026-07-06", "start_time": "09:00",'
+             ' "end_time": "09:30", "plugin_slug": "meeting"}',
+        content_type="application/json",
+    )
+    assert response.status_code == 200
+    block = week.blocks.get()
+    assert block.plugin_slug == "meeting"
+    assert MeetingNotes.objects.filter(plan_block=block).exists()
