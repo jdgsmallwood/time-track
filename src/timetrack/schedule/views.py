@@ -225,7 +225,9 @@ class PlanWeekView(View):
                 estimate_week_minutes,
                 get_current_plan_week,
             )
-            active_plan = TrainingPlan.objects.filter(is_active=True).first()
+            active_plan = TrainingPlan.objects.filter(
+                is_active=True, paused_on__isnull=True
+            ).first()
             if active_plan:
                 current_plan_week = get_current_plan_week(active_plan)
                 if current_plan_week:

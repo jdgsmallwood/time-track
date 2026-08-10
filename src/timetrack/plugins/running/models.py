@@ -54,6 +54,10 @@ class TrainingPlan(models.Model):
     name = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=False)
+    paused_on = models.DateField(
+        null=True, blank=True,
+        help_text="Set while paused (injury, illness). Resuming shifts start_date by the time off.",
+    )
     start_date = models.DateField(help_text="Monday of Week 1")
     # Pace zones in seconds/km for arithmetic
     pace_easy_sec = models.IntegerField(default=360, help_text="6:00/km")

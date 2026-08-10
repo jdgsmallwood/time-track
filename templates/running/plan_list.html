@@ -40,7 +40,9 @@
                class="font-semibold text-gray-900 hover:text-indigo-700">
               {{ plan.name }}
             </a>
-            {% if plan.is_active %}
+            {% if plan.paused_on %}
+            <span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Paused</span>
+            {% elif plan.is_active %}
             <span class="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Active</span>
             {% endif %}
           </div>

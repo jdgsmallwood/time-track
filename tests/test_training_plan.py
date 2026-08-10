@@ -283,3 +283,29 @@ def test_week_view_shows_training_plan_banner(auth_client):
     resp = auth_client.get(f"/schedule/weeks/{week_monday(today).isoformat()}/")
     assert resp.status_code == 200
     assert resp.context["current_plan_week"] is not None
+
+
+@pytest.mark.django_db
+def test_pause_hides_plan_and_resume_shifts_start_date(auth_client):
+    from timetrack.schedule.models import PlanWeek
+    from timetrack.schedule.services import week_monday
+
+    today = date.today()
+    monday = week_monday(today)
+    plan = TrainingPlan.objects.create(name="Injury Plan", start_date=monday, is_active=True)
+    TrainingPlanWeek.objects.create(plan=plan, week_number=1, phase="base", target_km=Decimal("40"))
+    PlanWeek.objects.create(start_date=monday)
+    week_url = f"/schedule/weeks/{monday.isoformat()}/"
+
+    auth_client.post(f"/running/training-plans/{plan.pk}/pause/")
+    plan.refresh_from_db()
+    assert plan.paused_on == today
+    assert auth_client.get(week_url).context["current_plan_week"] is None
+
+    # Resume two weeks later: start_date slides two weeks out
+    plan.paused_on = today - timedelta(days=14)
+    plan.save(update_fields=["paused_on"])
+    auth_client.post(f"/running/training-plans/{plan.pk}/pause/")
+    plan.refresh_from_db()
+    assert plan.paused_on is None
+    assert plan.start_date == monday + timedelta(days=14)

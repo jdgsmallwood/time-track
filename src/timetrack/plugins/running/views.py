@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
@@ -75,6 +77,27 @@ class TrainingPlanImportView(View):
         except ValueError as e:
             messages.error(request, f"Import failed: {e}")
             return redirect("training-plan-list")
+
+
+class TrainingPlanPauseView(View):
+    """Toggle pause. Resuming shifts start_date forward by whole weeks off."""
+
+    def post(self, request, pk):
+        plan = get_object_or_404(TrainingPlan, pk=pk)
+        if plan.paused_on:
+            weeks_off = (date.today() - plan.paused_on).days // 7
+            plan.start_date += timedelta(weeks=weeks_off)
+            plan.paused_on = None
+            plan.save(update_fields=["start_date", "paused_on"])
+            messages.success(
+                request,
+                f"'{plan.name}' resumed — shifted {weeks_off} week(s) to {plan.start_date:%-d %b %Y}.",
+            )
+        else:
+            plan.paused_on = date.today()
+            plan.save(update_fields=["paused_on"])
+            messages.success(request, f"'{plan.name}' paused. Resume when you're healthy.")
+        return redirect("training-plan-detail", pk=pk)
 
 
 class TrainingPlanActivateView(View):
