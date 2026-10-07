@@ -3,6 +3,7 @@ from datetime import date, timedelta
 
 from django.conf import settings
 from django.contrib import messages
+from django.db import transaction
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
@@ -10,17 +11,28 @@ from django.views import View
 from timetrack.plugins.registry import get_registry
 
 from .forms import (
+    BrainDumpForm,
+    BrainDumpScheduleForm,
     CloneTemplateForm,
     DailyCheckInForm,
     DailyRecapForm,
-    PlanningReflectionForm,
     PlanBlockForm,
+    PlanningReflectionForm,
     ReviewReflectionForm,
     TemplateBlockForm,
     TemplateWeekForm,
     WeeklyTaskForm,
 )
-from .models import DailyCheckIn, DailyGoalProgress, PlanBlock, PlanWeek, TemplateBlock, TemplateWeek, WeeklyTask
+from .models import (
+    BrainDumpItem,
+    DailyCheckIn,
+    DailyGoalProgress,
+    PlanBlock,
+    PlanWeek,
+    TemplateBlock,
+    TemplateWeek,
+    WeeklyTask,
+)
 from .services import (
     clone_template_to_week,
     complete_planning,
@@ -219,7 +231,9 @@ class PlanWeekView(View):
         strava_connected = False
         try:
             from django.db.models import Count as _Count
-            from timetrack.plugins.running.models import RunSession as _RunSession, TrainingPlan
+
+            from timetrack.plugins.running.models import RunSession as _RunSession
+            from timetrack.plugins.running.models import TrainingPlan
             from timetrack.plugins.running.services import (
                 estimate_session_minutes,
                 estimate_week_minutes,
@@ -446,6 +460,81 @@ class PlanWeekReviewView(View):
 
 
 # ─── Daily Check-in ──────────────────────────────────────────────────────────
+
+class BrainDumpView(View):
+    def dispatch(self, request, *args, **kwargs):
+        from django import forms
+
+        try:
+            self.checkin_date = forms.DateField(required=False).clean(request.GET.get("date"))
+        except forms.ValidationError:
+            return HttpResponse("Invalid check-in date.", status=400)
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request):
+        return self.render_panel(request)
+
+    def render_panel(self, request, capture_form=None, schedule_form=None, item_pk=None,
+                     message="", block=None):
+        items = list(BrainDumpItem.objects.filter(is_archived=False))
+        for item in items:
+            item.schedule_form = schedule_form if item.pk == item_pk else BrainDumpScheduleForm(
+                prefix=str(item.pk),
+                initial={"date": self.checkin_date, "start_time": "09:00", "end_time": "09:30"},
+            )
+        if capture_form is None:
+            capture_form = BrainDumpForm(initial={
+                "thoughts": request.POST.get("thoughts", "") if request.POST.get("action") != "capture" else "",
+            })
+        response = render(request, "schedule/partials/brain_dump.html", {
+            "items": items,
+            "capture_form": capture_form,
+            "checkin_date": self.checkin_date,
+            "message": message,
+            "expanded": request.method == "POST",
+            "block": block,
+        })
+        if block:
+            _trigger_week_stats_changed(response, block.week_id)
+        return response
+
+    @transaction.atomic
+    def post(self, request):
+        action = request.POST.get("action")
+        if action == "capture":
+            form = BrainDumpForm(request.POST)
+            if not form.is_valid():
+                return self.render_panel(request, capture_form=form)
+            thoughts = [line.strip() for line in form.cleaned_data["thoughts"].splitlines() if line.strip()]
+            BrainDumpItem.objects.bulk_create([BrainDumpItem(text=text) for text in thoughts])
+            return self.render_panel(request, message=f"Saved {len(thoughts)} item(s) for later.")
+        if action not in {"schedule", "dismiss"}:
+            return HttpResponse("Invalid action.", status=400)
+        try:
+            item_pk = int(request.POST.get("item", ""))
+        except ValueError:
+            return HttpResponse("Invalid item.", status=400)
+        item = get_object_or_404(BrainDumpItem, pk=item_pk)
+        form = BrainDumpScheduleForm(request.POST, prefix=str(item.pk))
+        if action == "schedule":
+            if not form.is_valid():
+                return self.render_panel(request, schedule_form=form, item_pk=item.pk)
+            if form.cleaned_data["date"] != self.checkin_date:
+                return HttpResponse("Schedule items from the daily check-in.", status=400)
+        # Claim the pending item once; retries must not create duplicate blocks.
+        if not BrainDumpItem.objects.filter(pk=item.pk, is_archived=False).update(is_archived=True):
+            return self.render_panel(request, message="This item has already been handled.")
+        if action == "dismiss":
+            return self.render_panel(request, message="Item dismissed.")
+        block = form.save(commit=False)
+        block.title = item.text[:200]
+        block.notes = item.text
+        block.week, _ = PlanWeek.objects.get_or_create(start_date=week_monday(block.date))
+        block.save()
+        block.week.status = "draft"
+        block.week.save(update_fields=["status"])
+        return self.render_panel(request, message="Added to the day's board.", block=block)
+
 
 class DailyCheckInView(View):
     def _get_context(self, checkin_date: date, check_in, form):

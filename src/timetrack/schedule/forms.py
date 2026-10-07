@@ -1,6 +1,14 @@
 from django import forms
 
-from .models import DailyCheckIn, PlanBlock, PlanWeekReflection, TemplateBlock, TemplateWeek, WeeklyGoal, WeeklyTask
+from .models import (
+    DailyCheckIn,
+    PlanBlock,
+    PlanWeekReflection,
+    TemplateBlock,
+    TemplateWeek,
+    WeeklyGoal,
+    WeeklyTask,
+)
 
 
 class TemplateWeekForm(forms.ModelForm):
@@ -42,6 +50,32 @@ class WeeklyTaskForm(forms.ModelForm):
         widgets = {
             "notes": forms.TextInput(),
         }
+
+
+class BrainDumpForm(forms.Form):
+    thoughts = forms.CharField(widget=forms.Textarea(attrs={
+        "rows": 3, "class": "form-input w-full text-sm",
+        "placeholder": "Everything on your mind — one item per line…",
+    }))
+
+
+class BrainDumpScheduleForm(forms.ModelForm):
+    class Meta:
+        model = PlanBlock
+        fields = ["date", "start_time", "end_time", "category"]
+        widgets = {
+            "date": forms.HiddenInput(),
+            "start_time": forms.TimeInput(attrs={"type": "time", "class": "form-input"}),
+            "end_time": forms.TimeInput(attrs={"type": "time", "class": "form-input"}),
+            "category": forms.Select(attrs={"class": "form-select"}),
+        }
+
+    def clean(self):
+        data = super().clean()
+        start, end = data.get("start_time"), data.get("end_time")
+        if start and end and end <= start:
+            self.add_error("end_time", "End time must be after start time.")
+        return data
 
 
 class CloneTemplateForm(forms.Form):

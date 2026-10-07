@@ -169,6 +169,15 @@ class DailyCheckIn(models.Model):
         return f"Check-in {self.date}"
 
 
+class BrainDumpItem(models.Model):
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_archived = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+
+
 class DailyGoalProgress(models.Model):
     check_in = models.ForeignKey(DailyCheckIn, on_delete=models.CASCADE, related_name="goal_progress")
     goal = models.ForeignKey(WeeklyGoal, on_delete=models.CASCADE, related_name="daily_progress")

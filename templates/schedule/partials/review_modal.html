@@ -10,6 +10,8 @@
               class="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
     </div>
 
+    <div class="px-5 pt-5" hx-get="{% url 'brain-dump' %}" hx-trigger="load" hx-swap="innerHTML"></div>
+
     <form hx-post="{% url 'plan-week-review' week_pk=week.pk %}"
           hx-target="#modal-root"
           hx-swap="innerHTML"

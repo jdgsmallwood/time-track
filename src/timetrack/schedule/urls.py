@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    BrainDumpView,
     CopyWeekForwardView,
     DailyCheckInView,
     DailyRecapView,
@@ -42,6 +43,7 @@ urlpatterns = [
     path("plan-weeks/<int:week_pk>/copy-forward/", CopyWeekForwardView.as_view(), name="copy-week-forward"),
     path("history/", PlanWeekHistoryView.as_view(), name="week-history"),
     # Daily check-in / recap
+    path("brain-dump/", BrainDumpView.as_view(), name="brain-dump"),
     path("days/<str:checkin_date>/check-in/", DailyCheckInView.as_view(), name="daily-checkin"),
     path("days/<str:checkin_date>/recap/", DailyRecapView.as_view(), name="daily-recap"),
     # Weekly tasks

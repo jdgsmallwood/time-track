@@ -1,0 +1,53 @@
+<section id="brain-dump" class="space-y-3" aria-label="Brain dump"
+         hx-target="this" hx-swap="outerHTML"
+         hx-on::response-error="this.querySelector('[role=status]').textContent = 'Could not save. Your text is still here; please try again.'"
+         hx-on::send-error="this.querySelector('[role=status]').textContent = 'Could not connect. Your text is still here; please try again.'">
+  <div>
+    <h3 class="text-sm font-semibold text-gray-900">Brain dump</h3>
+    <p class="text-xs text-gray-500">Clear your head without committing to today. Items stay here across days and weeks.</p>
+  </div>
+  <form hx-post="{% url 'brain-dump' %}{% if checkin_date %}?date={{ checkin_date|date:'Y-m-d' }}{% endif %}"
+        hx-disabled-elt="find button" class="space-y-2">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="capture">
+    <label for="{{ capture_form.thoughts.id_for_label }}" class="block text-sm text-gray-700">Things to remember (one per line)</label>
+    {{ capture_form.thoughts }}
+    {% if capture_form.errors %}<div role="alert" class="text-sm text-red-600">{{ capture_form.errors }}</div>{% endif %}
+    <button type="submit" class="btn-outline text-sm">Save for later</button>
+    <span class="text-xs text-gray-500">Saved separately from your check-in or review.</span>
+  </form>
+  <p role="status" class="text-sm text-indigo-700">{{ message }}</p>
+  <details {% if expanded %}open{% endif %}>
+    <summary class="cursor-pointer text-sm font-medium text-indigo-700">All saved items ({{ items|length }})</summary>
+    {% if checkin_date %}<p class="text-xs text-gray-500 mt-2">Choose a time to add an item to the board for {{ checkin_date|date:'l j F' }}.</p>{% endif %}
+    <div class="space-y-3 mt-3">
+      {% for item in items %}
+      <div class="border border-gray-200 rounded-lg p-3 space-y-2">
+        <p class="text-sm text-gray-800 whitespace-pre-line break-words">{{ item.text }}</p>
+        <form hx-post="{% url 'brain-dump' %}{% if checkin_date %}?date={{ checkin_date|date:'Y-m-d' }}{% endif %}"
+              hx-include="#id_thoughts" hx-disabled-elt="find button" class="space-y-2">
+          {% csrf_token %}
+          <input type="hidden" name="item" value="{{ item.pk }}">
+          {% if checkin_date %}
+          {{ item.schedule_form.date }}
+          <div class="flex flex-wrap gap-2">
+            {% for field in item.schedule_form.visible_fields %}
+            <div>
+              <label for="{{ field.id_for_label }}" class="block text-xs text-gray-500 mb-1">{{ field.label }}</label>
+              {{ field }}
+            </div>
+            {% endfor %}
+          </div>
+          {% if item.schedule_form.errors %}<div role="alert" class="text-sm text-red-600">{{ item.schedule_form.errors }}</div>{% endif %}
+          <button type="submit" name="action" value="schedule" class="btn-indigo text-sm">Add to day's board</button>
+          {% endif %}
+          <button type="submit" name="action" value="dismiss" formnovalidate class="btn-ghost text-sm">Dismiss</button>
+        </form>
+      </div>
+      {% empty %}
+      <p class="text-sm text-gray-500">Nothing waiting. Add whatever is on your mind above.</p>
+      {% endfor %}
+    </div>
+  </details>
+  {% if block %}{% include 'schedule/partials/block_chip.html' %}{% endif %}
+</section>
